@@ -4,6 +4,8 @@ import axios from 'axios';
 import { Lock, Loader2, CheckCircle, XCircle } from 'lucide-react'; // Added icons for toast
 import toast, { Toaster } from 'react-hot-toast';
 
+import { API_BASE_URL } from '../config'; // Import Config
+
 const ResetPassword = () => {
   const { token } = useParams();
   const navigate = useNavigate();
@@ -14,9 +16,9 @@ const ResetPassword = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // ✅ Make sure this matches your backend URL
-      await axios.post(`http://localhost:5001/api/auth/reset-password/${token}`, { newPassword });
-      
+      // ✅ Use Global Config URL
+      await axios.post(`${API_BASE_URL}/auth/reset-password/${token}`, { newPassword });
+
       // ✨ CUSTOM DARK THEME SUCCESS TOAST
       toast.custom((t) => (
         <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-stone-900 shadow-2xl rounded-xl pointer-events-auto flex ring-1 ring-white/10`}>
@@ -42,7 +44,7 @@ const ResetPassword = () => {
 
     } catch (error) {
       console.error(error);
-      
+
       // ❌ CUSTOM DARK THEME ERROR TOAST
       toast.custom((t) => (
         <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-stone-900 shadow-2xl rounded-xl pointer-events-auto flex ring-1 ring-red-500/50`}>
@@ -72,23 +74,23 @@ const ResetPassword = () => {
   return (
     <div className="min-h-screen bg-stone-950 flex flex-col items-center justify-center p-6 relative">
       <Toaster position="top-center" />
-      
+
       {/* Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.03),transparent_50%)]"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.03),transparent_50%)]"></div>
       </div>
 
       <div className="w-full max-w-md relative z-10">
-        
+
         {/* ✅ LOGO SECTION (Matches ForgotPassword style) */}
         <div className="flex justify-center mb-8">
-           <div className="w-20 h-20 bg-stone-900 rounded-full border border-white/10 flex items-center justify-center shadow-2xl p-1">
-              <img 
-                src="/Gallery/logo.jpg" 
-                alt="Logo" 
-                className="w-full h-full object-contain rounded-full" 
-              />
-           </div>
+          <div className="w-20 h-20 bg-stone-900 rounded-full border border-white/10 flex items-center justify-center shadow-2xl p-1">
+            <img
+              src="/Gallery/logo.jpg"
+              alt="Logo"
+              className="w-full h-full object-contain rounded-full"
+            />
+          </div>
         </div>
 
         {/* CARD */}
@@ -105,20 +107,20 @@ const ResetPassword = () => {
               <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest ml-1">Set New Password</label>
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-500 w-4 h-4 group-focus-within:text-white transition-colors" />
-                <input 
-                  type="password" 
-                  required 
+                <input
+                  type="password"
+                  required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••" 
+                  placeholder="••••••••"
                   className="w-full bg-stone-950 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white text-sm outline-none focus:border-white/30 transition-all placeholder:text-stone-700"
                 />
               </div>
             </div>
 
-            <button 
-              type="submit" 
-              disabled={loading} 
+            <button
+              type="submit"
+              disabled={loading}
               className="w-full bg-white text-black py-4 rounded-xl text-xs font-bold uppercase tracking-[0.2em] hover:bg-stone-200 transition-all flex items-center justify-center gap-2"
             >
               {loading ? (

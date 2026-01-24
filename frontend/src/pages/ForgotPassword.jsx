@@ -4,6 +4,8 @@ import { Mail, ArrowRight, Loader2, ArrowLeft, CheckCircle, XCircle } from 'luci
 import { Link } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 
+import { API_BASE_URL } from '../config'; // Import Config
+
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -13,9 +15,9 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
-      // Make sure this URL matches your backend port
-      await axios.post('http://localhost:5001/api/auth/forgot-password', { email });
-      
+      // Use API_BASE_URL
+      await axios.post(`${API_BASE_URL}/auth/forgot-password`, { email });
+
       // CUSTOM PREMIUM TOAST - SUCCESS
       toast.custom((t) => (
         <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-stone-900 shadow-2xl rounded-xl pointer-events-auto flex ring-1 ring-white/10`}>
@@ -73,26 +75,26 @@ const ForgotPassword = () => {
 
   return (
     <div className="min-h-screen bg-stone-950 flex flex-col items-center justify-center p-6 relative">
-      
+
       <Toaster position="top-center" />
 
       {/* Background Effect */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.03),transparent_50%)]"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.03),transparent_50%)]"></div>
       </div>
 
       <div className="w-full max-w-md relative z-10">
-        
+
         {/* ✅ UPDATED LOGO SECTION */}
         <div className="flex justify-center mb-8">
-           <Link to="/" className="w-20 h-20 bg-stone-900 rounded-full border border-white/10 flex items-center justify-center shadow-2xl hover:scale-105 transition-transform p-1">
-              {/* Replaced 'F' text with Image */}
-              <img 
-                src="/Gallery/logo.jpg" 
-                alt="Flawless Logo" 
-                className="w-full h-full object-contain rounded-full"
-              />
-           </Link>
+          <Link to="/" className="w-20 h-20 bg-stone-900 rounded-full border border-white/10 flex items-center justify-center shadow-2xl hover:scale-105 transition-transform p-1">
+            {/* Replaced 'F' text with Image */}
+            <img
+              src="/Gallery/logo.jpg"
+              alt="Flawless Logo"
+              className="w-full h-full object-contain rounded-full"
+            />
+          </Link>
         </div>
 
         {/* CARD */}
@@ -109,20 +111,20 @@ const ForgotPassword = () => {
               <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest ml-1">Email Address</label>
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-600 w-4 h-4 group-focus-within:text-white transition-colors" />
-                <input 
-                  type="email" 
-                  required 
+                <input
+                  type="email"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com" 
+                  placeholder="name@example.com"
                   className="w-full bg-stone-950 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white text-sm outline-none focus:border-white/30 transition-all placeholder:text-stone-800"
                 />
               </div>
             </div>
 
-            <button 
-              type="submit" 
-              disabled={loading} 
+            <button
+              type="submit"
+              disabled={loading}
               className="w-full bg-white text-black py-4 rounded-xl text-xs font-bold uppercase tracking-[0.2em] hover:bg-stone-200 transition-all flex items-center justify-center gap-2 group"
             >
               {loading ? (

@@ -56,8 +56,14 @@ app.use('/api/', limiter); // Apply to all API routes
 
 
 // ==========================================
-// 1. DATABASE CONNECTION
+// 0. ENSURE UPLOADS DIRECTORY EXISTS
 // ==========================================
+import fs from 'fs';
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log("📁 Created 'uploads' directory");
+}
 // ==========================================
 // 1. DATABASE CONNECTION CHECK
 // ==========================================

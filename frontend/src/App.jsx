@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavig
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import LoginModal from './components/LoginModal'; // 👈 Import LoginModal
-import Homepage from './pages/Homepage';
+import HomePage from './pages/HomePage';
 import BookingPage from './pages/BookingPage';
 import ServicesPage from './pages/ServicesPage';
 import Dashboard from './pages/Dashboard';
@@ -66,7 +66,7 @@ const SecretKeyListener = () => {
 
     // Start listening
     window.addEventListener('keydown', handleKeyPress);
-    
+
     // Cleanup when leaving
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [navigate]);
@@ -88,7 +88,7 @@ const Layout = ({ children }) => {
     const handleScroll = () => {
       // Check if user has already seen the modal or is logged in
       const hasSeenModal = localStorage.getItem('hasSeenLoginModal');
-      
+
       // Trigger if: Not seen, Not logged in, Scrolled > 300px
       if (!hasSeenModal && !user && window.scrollY > 300) {
         setShowLoginModal(true);
@@ -105,7 +105,7 @@ const Layout = ({ children }) => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <SecretKeyListener /> 
+      <SecretKeyListener />
       <ChatWidget />
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
       {!shouldHideNavbar && <Navbar />}
@@ -128,7 +128,7 @@ function App() {
       <Router>
         <Layout>
           <Routes>
-            <Route path="/" element={<Homepage />} />
+            <Route path="/" element={<HomePage />} />
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
@@ -136,14 +136,14 @@ function App() {
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
-            
+
             {/* 🔐 THE SECRET ROUTE */}
             <Route path={SECRET_ADMIN_URL} element={<AdminLogin />} />
-            
+
             <Route path="/booking" element={<CustomerRoute><BookingPage /></CustomerRoute>} />
             <Route path="/profile" element={<CustomerRoute><Profile /></CustomerRoute>} />
             <Route path="/admin-dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
-            
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout>

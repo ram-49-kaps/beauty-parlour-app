@@ -1,5 +1,5 @@
 """
-🤖 FLAWLESS BY DRASHTI - AI SALON ASSISTANT 
+🤖 FLAWLESS BY DRASHTI - AI SALON ASSISTANT (Lightweight Version)
 """
 
 import os
@@ -13,12 +13,8 @@ from mysql.connector import Error
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-# ✅ LangChain Imports
+# ✅ LangChain Imports (Lightweight)
 from langchain_groq import ChatGroq
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_core.documents import Document
 from langchain_core.tools import tool
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from langchain_core.prompts import ChatPromptTemplate
@@ -46,15 +42,11 @@ DB_CONFIG = {
     'port': int(os.getenv("DB_PORT", 3306)),
     'ssl_disabled': False
 }
-# ... (rest of configuration) ...
-
-# ... (inside create_booking tool) ...
-# Duplicate create_booking removed.
 
 
 # ✅ Using the NEW Supported Model
 llm = ChatGroq(model="meta-llama/llama-4-maverick-17b-128e-instruct", temperature=1)
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+# ❌ REMOVED EMBEDDINGS to save RAM
 
 # ═══════════════════════════════════════════════════════════════
 # 2️⃣ DATABASE FUNCTIONS
@@ -62,7 +54,11 @@ embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-
 
 def get_db_connection():
     try:
-        conn = mysql.connector.connect(**DB_CONFIG)
+        if DB_CONFIG.get('ssl_disabled') is False:
+             conn = mysql.connector.connect(**DB_CONFIG) # SSL handled by env/config inside library usually or pass ssl params explicitly if needed
+        else:
+             conn = mysql.connector.connect(**DB_CONFIG)
+             
         return conn
     except Error as e:
         print(f"❌ Database Connection Error: {e}")
@@ -100,18 +96,10 @@ def get_service_by_name(service_name):
         return None
 
 # ═══════════════════════════════════════════════════════════════
-# 3️⃣ KNOWLEDGE BASE
+# 3️⃣ KNOWLEDGE BASE (Simplified)
 # ═══════════════════════════════════════════════════════════════
 
-def build_knowledge_base():
-    static_info = "LOCATION: Gangotri Society Bhatar, Surat\nHOURS: Mon-Sat 10am-7pm\nCONTACT: +91 98765 43210"
-    docs = [Document(page_content=static_info)]
-    splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=100)
-    chunks = splitter.split_documents(docs)
-    vector_db = FAISS.from_documents(chunks, embeddings)
-    return vector_db.as_retriever()
-
-retriever = build_knowledge_base()
+# ❌ REMOVED FAISS / VECTOR DB
 
 # ═══════════════════════════════════════════════════════════════
 # 4️⃣ TOOLS
@@ -139,11 +127,8 @@ def list_all_services() -> str:
 @tool
 def search_salon_info(query: str) -> str:
     """Search for general info like location, hours, or policies."""
-    try:
-        docs = retriever.invoke(query)
-        return "\n\n".join([d.page_content for d in docs[:3]]) if docs else "No info found."
-    except Exception:
-        return "Info unavailable."
+    # Lightweight static info return (saves memory by removing FAISS)
+    return "LOCATION: Gangotri Society Bhatar, Surat\nHOURS: Mon-Sat 10am-7pm\nCONTACT: +91 98765 43210"
 
 @tool
 def check_availability(date_str: str) -> str:
@@ -175,12 +160,12 @@ def get_booking_details(booking_id: str) -> str:
         if not conn: return "Database connection error."
         
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("""
+        cursor.execute(\"\"\"
             SELECT b.id, b.booking_date, b.booking_time, b.status, b.customer_name, s.name as service_name
             FROM bookings b
             JOIN services s ON b.service_id = s.id
             WHERE b.id = %s
-        """, (booking_id,))
+        \"\"\", (booking_id,))
         
         booking = cursor.fetchone()
         cursor.close()
@@ -214,7 +199,22 @@ def create_booking(customer_name: str, customer_email: str, customer_phone: str,
         }
         
         # 2. Call Backend API
-        api_url = "http://localhost:5001/api/bookings"
+        # Determine API URL - in Production use the render backend URL
+        # For now, default to local if not set, but in prod it must be set.
+        # Actually, if both are on Render, use the https URL.
+        # But this code runs ON server. It calls backend.
+        api_url = os.getenv("BACKEND_API_URL", "http://localhost:5001/api/bookings")
+        
+        # If we are on Render, localhost:5001 won't work to reach the OTHER service.
+        # We need the user to set BACKEND_API_URL in chatbot env if they want this to work perfectly cross-service, 
+        # OR just use the public URL: https://beauty-parlour-app.onrender.com/api/bookings
+        if "onrender" in os.getenv("RENDER_EXTERNAL_URL", ""):
+             # Heuristic to switch to prod URL if not set? 
+             # Better to rely on env var or just hardcode the public one if we know it.
+             # User's backend is: https://beauty-parlour-app.onrender.com
+             if "localhost" in api_url:
+                 api_url = "https://beauty-parlour-app.onrender.com/api/bookings"
+
         response = requests.post(api_url, json=payload)
         
         if response.status_code == 201:
@@ -234,7 +234,7 @@ def create_booking(customer_name: str, customer_email: str, customer_phone: str,
 # 5️⃣ AGENT SETUP
 # ═══════════════════════════════════════════════════════════════
 
-SYSTEM_PROMPT = """You are the professional and polite AI receptionist for Flawless by Drashti, a premium beauty studio in Surat.
+SYSTEM_PROMPT = \"\"\"You are the professional and polite AI receptionist for Flawless by Drashti, a premium beauty studio in Surat.
 
 Your job is to help guests:
 - Discover services and prices.
@@ -284,7 +284,7 @@ MEMORY & CONTEXT (EXTREMELY IMPORTANT):
 
 OUTPUT FORMATTING:
 - **Time Slots**: NEVER list slots as bullet points. ALWAYS use the interactive tag: ||SLOTS: 10:00, 11:00, 12:00||.
-"""
+\"\"\"
 
 tools = [list_all_services, search_salon_info, check_availability, create_booking, get_booking_details]
 

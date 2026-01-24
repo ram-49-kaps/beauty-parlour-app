@@ -7,6 +7,10 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:50
 export const getImageUrl = (path) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
+
+    // ✅ Handle Local Gallery Images (Public Folder)
+    if (path.startsWith('/Gallery')) return path;
+
     // Use the Backend URL (without /api) for uploads
     const baseUrl = API_BASE_URL.replace('/api', '');
     return `${baseUrl}/uploads/${path}`;

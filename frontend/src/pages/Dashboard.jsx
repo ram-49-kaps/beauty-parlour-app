@@ -13,7 +13,7 @@ import {
   Clock, Download, RefreshCcw
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
-import { API_BASE_URL } from '../config'; // Import Config
+import { API_BASE_URL, getImageUrl } from '../config'; // Import Config
 
 const Dashboard = () => {
   const navigate = useNavigate();

@@ -20,7 +20,6 @@ from langchain.agents import create_tool_calling_agent, AgentExecutor
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage, AIMessage
 
-
 # ═══════════════════════════════════════════════════════════════
 # 1️⃣ CONFIGURATION
 # ═══════════════════════════════════════════════════════════════
@@ -43,10 +42,8 @@ DB_CONFIG = {
     'ssl_disabled': False
 }
 
-
 # ✅ Using the NEW Supported Model
 llm = ChatGroq(model="meta-llama/llama-4-maverick-17b-128e-instruct", temperature=1)
-# ❌ REMOVED EMBEDDINGS to save RAM
 
 # ═══════════════════════════════════════════════════════════════
 # 2️⃣ DATABASE FUNCTIONS
@@ -55,7 +52,9 @@ llm = ChatGroq(model="meta-llama/llama-4-maverick-17b-128e-instruct", temperatur
 def get_db_connection():
     try:
         if DB_CONFIG.get('ssl_disabled') is False:
-             conn = mysql.connector.connect(**DB_CONFIG) # SSL handled by env/config inside library usually or pass ssl params explicitly if needed
+             # TiDB usually needs SSL, but mysql-connector handles it automatically if available
+             # We pass connection params directly
+             conn = mysql.connector.connect(**DB_CONFIG)
         else:
              conn = mysql.connector.connect(**DB_CONFIG)
              
@@ -96,13 +95,7 @@ def get_service_by_name(service_name):
         return None
 
 # ═══════════════════════════════════════════════════════════════
-# 3️⃣ KNOWLEDGE BASE (Simplified)
-# ═══════════════════════════════════════════════════════════════
-
-# ❌ REMOVED FAISS / VECTOR DB
-
-# ═══════════════════════════════════════════════════════════════
-# 4️⃣ TOOLS
+# 3️⃣ TOOLS
 # ═══════════════════════════════════════════════════════════════
 
 @tool
@@ -127,7 +120,7 @@ def list_all_services() -> str:
 @tool
 def search_salon_info(query: str) -> str:
     """Search for general info like location, hours, or policies."""
-    # Lightweight static info return (saves memory by removing FAISS)
+    # Lightweight static info return
     return "LOCATION: Gangotri Society Bhatar, Surat\nHOURS: Mon-Sat 10am-7pm\nCONTACT: +91 98765 43210"
 
 @tool
@@ -160,12 +153,8 @@ def get_booking_details(booking_id: str) -> str:
         if not conn: return "Database connection error."
         
         cursor = conn.cursor(dictionary=True)
-        query = """
-            SELECT b.id, b.booking_date, b.booking_time, b.status, b.customer_name, s.name as service_name
-            FROM bookings b
-            JOIN services s ON b.service_id = s.id
-            WHERE b.id = %s
-        """
+        # Using simple quotes to avoid syntax errors with escape characters
+        query = "SELECT b.id, b.booking_date, b.booking_time, b.status, b.customer_name, s.name as service_name FROM bookings b JOIN services s ON b.service_id = s.id WHERE b.id = %s"
         cursor.execute(query, (booking_id,))
         
         booking = cursor.fetchone()
@@ -182,13 +171,12 @@ def get_booking_details(booking_id: str) -> str:
 @tool
 def create_booking(customer_name: str, customer_email: str, customer_phone: str, service_name: str, booking_date: str, booking_time: str) -> str:
     """Create a salon booking by calling the main Backend API. This ensures emails and WhatsApp messages are sent."""
-    import requests # Local import to avoid touching file header
+    import requests
     try:
         service = get_service_by_name(service_name)
         if not service:
             return "Service not found. Ask user for exact service name."
         
-        # 1. Prepare Payload
         payload = {
             "customer_name": customer_name,
             "customer_email": customer_email,
@@ -196,23 +184,11 @@ def create_booking(customer_name: str, customer_email: str, customer_phone: str,
             "service_id": service['id'],
             "booking_date": booking_date,
             "booking_time": booking_time,
-            "user_id": None # Guest booking via Chatbot
+            "user_id": None
         }
         
-        # 2. Call Backend API
-        # Determine API URL - in Production use the render backend URL
-        # For now, default to local if not set, but in prod it must be set.
-        # Actually, if both are on Render, use the https URL.
-        # But this code runs ON server. It calls backend.
         api_url = os.getenv("BACKEND_API_URL", "http://localhost:5001/api/bookings")
-        
-        # If we are on Render, localhost:5001 won't work to reach the OTHER service.
-        # We need the user to set BACKEND_API_URL in chatbot env if they want this to work perfectly cross-service, 
-        # OR just use the public URL: https://beauty-parlour-app.onrender.com/api/bookings
         if "onrender" in os.getenv("RENDER_EXTERNAL_URL", ""):
-             # Heuristic to switch to prod URL if not set? 
-             # Better to rely on env var or just hardcode the public one if we know it.
-             # User's backend is: https://beauty-parlour-app.onrender.com
              if "localhost" in api_url:
                  api_url = "https://beauty-parlour-app.onrender.com/api/bookings"
 
@@ -299,7 +275,6 @@ prompt = ChatPromptTemplate.from_messages([
 agent = create_tool_calling_agent(llm, tools, prompt)
 agent_executor = AgentExecutor(agent=agent, tools=tools, handle_parsing_errors=True)
 
-# ✅ CRITICAL FIX: Initialize as an Empty List, NOT None
 chat_history = [] 
 
 # ═══════════════════════════════════════════════════════════════
@@ -310,7 +285,6 @@ chat_history = []
 def chat_endpoint():
     global chat_history
     try:
-        # ✅ SAFETY CHECK: If chat_history ever becomes None, force it to []
         if chat_history is None:
             chat_history = []
             
@@ -324,10 +298,8 @@ def chat_endpoint():
         is_logged_in = data.get('is_logged_in', False)
         print(f"📨 Input: {user_message} | LoggedIn: {is_logged_in}")
         
-        # Contextual Input
         contextual_input = f"[LOGGED_IN: {is_logged_in}] {user_message}"
 
-        # Invoke Agent
         response = agent_executor.invoke({
             "chat_history": chat_history, 
             "input": contextual_input
@@ -336,18 +308,15 @@ def chat_endpoint():
         output_text = response["output"]
         print(f"🤖 Output: {output_text}")
         
-        # Save History
         chat_history.append(HumanMessage(content=user_message))
         chat_history.append(AIMessage(content=output_text))
         
-        # Limit Memory to last 30 turns (approx 15 exchanges) to prevent amnesia
         if len(chat_history) > 30: chat_history = chat_history[-30:]
         
         return jsonify({"reply": output_text})
 
     except Exception as e:
         print(f"❌ SYSTEM ERROR: {e}")
-        # Reset memory on error just in case it caused the crash
         chat_history = []
         return jsonify({"reply": "I'm having a brief brain freeze. Please try asking again."})
 

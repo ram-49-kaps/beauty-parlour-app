@@ -82,6 +82,27 @@ export const updateService = async (req, res) => {
     res.status(500).json({ message: 'Error updating service' });
   }
 };
+// --------------------- SERVICE IMAGE UPLOAD ---------------------
+export const uploadServiceImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    // Return the relative path or full URL. 
+    // Usually relative path is better if our frontend uses getImageUrl helper.
+    const imagePath = req.file.filename;
+
+    res.json({
+      message: 'Image uploaded successfully',
+      image_url: imagePath
+    });
+  } catch (error) {
+    console.error('Service image upload error:', error);
+    res.status(500).json({ message: 'Error uploading image' });
+  }
+};
+
 // Delete service
 export const deleteService = async (req, res) => {
   try {

@@ -6,8 +6,11 @@ import {
   updateService,
   deleteService,
   addGalleryItem, // Added
-  deleteGalleryItem // Added
+  deleteGalleryItem, // Added
+  uploadServiceImage // 👈 Added
 } from '../controllers/serviceController.js';
+
+import { upload } from '../middleware/uploadMiddleware.js'; // 👈 Added
 
 // ✅ 1. Import both middlewares (Note: 'authorizeAdmin', not 'isAdmin')
 import { authenticateToken, authorizeAdmin } from '../middleware/authMiddleware.js';
@@ -22,6 +25,7 @@ router.get('/gallery', getGallery); // Using renamed getGallery
 // --- Admin Routes ---
 // (Protected: User must be logged in AND be an admin)
 router.post('/services', authenticateToken, authorizeAdmin, createService);
+router.post('/services/upload', authenticateToken, authorizeAdmin, upload.single('image'), uploadServiceImage); // 👈 Added
 router.put('/services/:id', authenticateToken, authorizeAdmin, updateService);
 router.delete('/services/:id', authenticateToken, authorizeAdmin, deleteService);
 

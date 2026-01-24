@@ -48,6 +48,7 @@ const Dashboard = () => {
   const [editingService, setEditingService] = useState(null);
   const [serviceToDelete, setServiceToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false); // ✅ Added Upload Loading
   const [serviceFormData, setServiceFormData] = useState({ name: '', description: '', price: '', duration: '', image_url: '' });
 
   // --- API CALLS ---
@@ -93,8 +94,7 @@ const Dashboard = () => {
       const token = localStorage.getItem('token');
       if (!token) { navigate('/admin-login'); return; }
 
-      const [bookingRes, statsRes, bookingsRes, servicesRes, galleryRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/my-bookings`, getAuthHeader()),
+      const [statsRes, bookingsRes, servicesRes, galleryRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/bookings/stats`, getAuthHeader()),
         axios.get(`${API_BASE_URL}/bookings`, getAuthHeader()),
         axios.get(`${API_BASE_URL}/services`),
@@ -266,6 +266,33 @@ const Dashboard = () => {
       fetchData();
     } catch (error) {
       toast.error('Failed', { id: toastId });
+    }
+  };
+
+  // ✅ HANDLE SERVICE IMAGE UPLOAD
+  const handleServiceImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const toastId = toast.loading('Uploading image...');
+    setIsUploading(true);
+    try {
+      const res = await axios.post(`${API_BASE_URL}/services/upload`, formData, {
+        headers: {
+          ...getAuthHeader().headers,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      setServiceFormData({ ...serviceFormData, image_url: res.data.image_url });
+      toast.success('Image Uploaded!', { id: toastId });
+    } catch (err) {
+      console.error(err);
+      toast.error('Upload failed', { id: toastId });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -633,7 +660,7 @@ const Dashboard = () => {
               {services.map(service => (
                 <div key={service.id} className="bg-stone-900/50 border border-white/10 rounded-2xl overflow-hidden group hover:border-white/20 transition-all">
                   <div className="h-48 overflow-hidden relative">
-                    <img src={service.image_url} alt={service.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500 opacity-80 group-hover:opacity-100" />
+                    <img src={getImageUrl(service.image_url)} alt={service.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500 opacity-80 group-hover:opacity-100" />
                     <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/10">₹{service.price}</div>
                   </div>
                   <div className="p-6">
@@ -687,9 +714,9 @@ const Dashboard = () => {
               {gallery.map(item => (
                 <div key={item.id} className="relative group bg-stone-900 border border-white/10 rounded-2xl overflow-hidden aspect-square">
                   {item.type === 'video' ? (
-                    <video src={item.image_url} className="w-full h-full object-cover opacity-80" muted />
+                    <video src={getImageUrl(item.image_url)} className="w-full h-full object-cover opacity-80" muted />
                   ) : (
-                    <img src={item.image_url} alt={item.title} className="w-full h-full object-cover opacity-80" />
+                    <img src={getImageUrl(item.image_url)} alt={item.title} className="w-full h-full object-cover opacity-80" />
                   )}
 
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4 text-center">
@@ -751,7 +778,48 @@ const Dashboard = () => {
                 <div><label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block mb-2">Price</label><input required type="number" value={serviceFormData.price} onChange={e => setServiceFormData({ ...serviceFormData, price: e.target.value })} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-white/30" /></div>
                 <div><label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block mb-2">Duration</label><input required type="number" value={serviceFormData.duration} onChange={e => setServiceFormData({ ...serviceFormData, duration: e.target.value })} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-white/30" /></div>
               </div>
-              <div><label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block mb-2">Image URL</label><input required type="text" value={serviceFormData.image_url} onChange={e => setServiceFormData({ ...serviceFormData, image_url: e.target.value })} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-white/30" /></div>
+
+              <div>
+                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block mb-2">Service Image</label>
+                <div className="flex flex-col gap-3">
+                  {/* Preview Section */}
+                  <div className="flex gap-4 items-center p-3 bg-black/30 border border-white/5 rounded-xl">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden border border-white/10 bg-stone-800 flex-shrink-0">
+                      <img src={getImageUrl(serviceFormData.image_url)} alt="Preview" className="w-full h-full object-cover" onError={(e) => { e.target.src = 'https://via.placeholder.com/150?text=No+Image'; }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] text-stone-500 truncate mb-1">{serviceFormData.image_url || 'No image selected'}</p>
+                      <input
+                        type="file"
+                        onChange={handleServiceImageUpload}
+                        className="hidden"
+                        id="service-image-upload"
+                        accept="image/*"
+                      />
+                      <label
+                        htmlFor="service-image-upload"
+                        className={`inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[10px] font-bold uppercase tracking-widest cursor-pointer transition-all ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                      >
+                        {isUploading ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                        {serviceFormData.image_url ? 'Change Image' : 'Upload Image'}
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Manual URL Input (Optional) */}
+                  <div className="flex flex-col">
+                    <span className="text-[9px] text-stone-600 uppercase mb-1">Or provide direct URL</span>
+                    <input
+                      type="text"
+                      placeholder="/Gallery/file.jpg or https://..."
+                      value={serviceFormData.image_url}
+                      onChange={e => setServiceFormData({ ...serviceFormData, image_url: e.target.value })}
+                      className="w-full bg-black/10 border border-white/5 rounded-lg p-2 text-xs text-stone-400 outline-none focus:border-white/20"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div><label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block mb-2">Description</label><textarea required rows="3" value={serviceFormData.description} onChange={e => setServiceFormData({ ...serviceFormData, description: e.target.value })} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-white/30"></textarea></div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setShowServiceModal(false)} className="flex-1 py-3 rounded-xl border border-white/10 text-stone-400 hover:text-white text-xs font-bold uppercase">Cancel</button>

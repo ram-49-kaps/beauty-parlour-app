@@ -7,8 +7,9 @@ const storage = multer.diskStorage({
     cb(null, 'uploads/'); // Save files in 'uploads' folder
   },
   filename: (req, file, cb) => {
-    // Name file: user-ID-timestamp.jpg
-    cb(null, `user-${req.user.id}-${Date.now()}${path.extname(file.originalname)}`);
+    // Generate unique filename
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, `asset-${uniqueSuffix}${path.extname(file.originalname)}`);
   }
 });
 
@@ -25,7 +26,7 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-export const upload = multer({ 
+export const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // Limit 5MB
   fileFilter: fileFilter

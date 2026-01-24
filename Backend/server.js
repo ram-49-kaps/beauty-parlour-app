@@ -124,6 +124,11 @@ app.use('/api', serviceRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api', chatRoutes); // 👈 Register Chat Route
 
+// Root Route ( Health Check )
+app.get('/', (req, res) => {
+  res.send('✅ Flawless Beauty Parlour API is Running! 🚀');
+});
+
 // 🚀 START SERVER
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {

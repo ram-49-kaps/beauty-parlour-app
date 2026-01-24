@@ -1,0 +1,13 @@
+flask
+flask-cors
+python-dotenv
+mysql-connector-python
+requests
+gunicorn
+langchain
+langchain-groq
+langchain-huggingface
+langchain-community
+faiss-cpu
+sentence-transformers
+huggingface-hub

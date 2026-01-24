@@ -160,12 +160,13 @@ def get_booking_details(booking_id: str) -> str:
         if not conn: return "Database connection error."
         
         cursor = conn.cursor(dictionary=True)
-        cursor.execute(\"\"\"
+        query = """
             SELECT b.id, b.booking_date, b.booking_time, b.status, b.customer_name, s.name as service_name
             FROM bookings b
             JOIN services s ON b.service_id = s.id
             WHERE b.id = %s
-        \"\"\", (booking_id,))
+        """
+        cursor.execute(query, (booking_id,))
         
         booking = cursor.fetchone()
         cursor.close()

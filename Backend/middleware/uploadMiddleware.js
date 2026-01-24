@@ -4,7 +4,9 @@ import path from 'path';
 // Set storage engine
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // Save files in 'uploads' folder
+    // Ensuring we use an absolute path relative to the project root
+    const uploadPath = path.join(process.cwd(), 'Backend', 'uploads');
+    cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
     // Generate unique filename
@@ -28,6 +30,6 @@ const fileFilter = (req, file, cb) => {
 
 export const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // Limit 5MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // Limit 10MB
   fileFilter: fileFilter
 });

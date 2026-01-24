@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import jwt from 'jsonwebtoken';
+import multer from 'multer'; // 👈 Added for Error Handling
 import rateLimit from 'express-rate-limit'; // ✅ Security: Rate Limiting
 
 
@@ -36,7 +37,10 @@ app.use(helmet({
 
 // 🌍 CORS
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    (process.env.FRONTEND_URL || 'http://localhost:5173') + '/'
+  ],
   credentials: true,
 }));
 
@@ -133,9 +137,18 @@ app.use('/api', serviceRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api', chatRoutes); // 👈 Register Chat Route
 
-// Root Route ( Health Check )
-app.get('/', (req, res) => {
-  res.send('✅ Flawless Beauty Parlour API is Running! 🚀');
+// 🖼️ Error Handler for Multer (File Uploads)
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ message: 'File too large! Max limit is 10MB.' });
+    }
+    return res.status(400).json({ message: err.message });
+  } else if (err) {
+    console.error("Internal Server Error:", err);
+    return res.status(500).json({ message: err.message || 'Internal Server Error' });
+  }
+  next();
 });
 
 // 🚀 START SERVER

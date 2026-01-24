@@ -289,8 +289,9 @@ const Dashboard = () => {
       setServiceFormData({ ...serviceFormData, image_url: res.data.image_url });
       toast.success('Image Uploaded!', { id: toastId });
     } catch (err) {
-      console.error(err);
-      toast.error('Upload failed', { id: toastId });
+      console.error("Upload Error Details:", err.response?.data || err.message);
+      const errorMessage = err.response?.data?.message || err.message || 'Upload failed';
+      toast.error(`Error: ${errorMessage}`, { id: toastId });
     } finally {
       setIsUploading(false);
     }

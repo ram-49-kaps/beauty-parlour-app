@@ -1,11 +1,15 @@
 import multer from 'multer';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Set storage engine
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Ensuring we use an absolute path relative to the project root
-    const uploadPath = path.join(process.cwd(), 'Backend', 'uploads');
+    // Construct the path to the uploads folder in the parent directory
+    const uploadPath = path.join(__dirname, '..', 'uploads');
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {

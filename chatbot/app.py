@@ -20,7 +20,161 @@ from langchain.agents import initialize_agent, AgentType
 from langchain.memory import ConversationBufferMemory
 from langchain_core.messages import HumanMessage, AIMessage
 
-# ... [keep everything else until agent setup] ...
+
+# ═══════════════════════════════════════════════════════════════
+# 2️⃣ FLASK & LLM SETUP
+# ═══════════════════════════════════════════════════════════════
+
+load_dotenv()
+app = Flask(__name__)
+CORS(app)
+
+# Groq LLM Setup
+llm = ChatGroq(
+    temperature=0.1,
+    groq_api_key=os.getenv("GROQ_API_KEY"),
+    model_name="llama-3.3-70b-versatile"
+)
+
+
+# ═══════════════════════════════════════════════════════════════
+# 3️⃣ DATABASE UTILS
+# ═══════════════════════════════════════════════════════════════
+
+def get_db_connection():
+    try:
+        conn = mysql.connector.connect(
+            host=os.getenv("DB_HOST"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            database=os.getenv("DB_NAME"),
+            port=int(os.getenv("DB_PORT", 4000))
+        )
+        return conn
+    except Error as e:
+        print(f"❌ DB CONNECTION ERROR: {e}")
+        return None
+
+# ═══════════════════════════════════════════════════════════════
+# 4️⃣ TOOLS DEFINITION
+# ═══════════════════════════════════════════════════════════════
+
+@tool
+def list_all_services(query: str = "") -> str:
+    """Returns a formatted list of all salon services, prices, and durations. Use this for menu/pricing questions."""
+    conn = get_db_connection()
+    if not conn: return "Sorry, I can't access the service list right now."
+    
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT name, price, duration FROM services")
+    services = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    
+    if not services: return "We are currently updating our service menu. Please check back later!"
+    
+    table = "| Service Name | Price | Duration |\n| :--- | :--- | :--- |\n"
+    for s in services:
+        table += f"| {s['name']} | ₹{s['price']} | {s['duration']} mins |\n"
+    return table
+
+@tool
+def search_salon_info(query: str = "") -> str:
+    """Provides general information like location, operating hours, and contact details."""
+    return """
+    **Flawless by Drashti**
+    📍 Location: Surat, Gujarat, India.
+    ⏰ Hours: 10:00 AM - 8:00 PM (Monday - Sunday)
+    📞 Contact: Refer to the website for direct calls.
+    ✨ Specialties: Luxury Hair Treatments, Bridal Makeup, and Professional Nail Art.
+    """
+
+@tool
+def check_availability(booking_date: str) -> str:
+    """Checks for available time slots on a specific date (YYYY-MM-DD). Returns interactive tags."""
+    try:
+        datetime.strptime(booking_date, "%Y-%m-%d")
+    except ValueError:
+        return "Invalid date format. Please use YYYY-MM-DD."
+
+    conn = get_db_connection()
+    if not conn: return "Database connection failed."
+    
+    cursor = conn.cursor(dictionary=True)
+    # Check for bookings that are NOT rejected
+    cursor.execute("SELECT booking_time FROM bookings WHERE booking_date = %s AND status != 'rejected'", (booking_date,))
+    booked = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    
+    # Standard slots from 10 AM to 7 PM
+    booked_times = [str(b['booking_time'])[:5] for b in booked]
+    all_slots = ["10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"]
+    available = [s for s in all_slots if s not in booked_times]
+    
+    if not available:
+        return f"I'm sorry, we are fully booked on {booking_date}. Would you like to check another day?"
+    
+    return f"||SLOTS: {', '.join(available)}||"
+
+@tool
+def create_booking(name: str, email: str, phone: str, service_name: str, booking_date: str, booking_time: str) -> str:
+    """Creates a booking record once ALL details are provided. Details needed: name, email, phone, service, date, time."""
+    # Prevent creating bookings with placeholder data
+    placeholders = ["awaiting", "unknown", "placeholder", "n/a", "not provided"]
+    if any(p in name.lower() or p in email.lower() or p in phone.lower() for p in placeholders):
+        return "I need your actual name, email, and phone number to finalize the booking. Please provide them."
+
+    conn = get_db_connection()
+    if not conn: return "Booking system is currently offline."
+    
+    cursor = conn.cursor(dictionary=True)
+    # Find service ID and price
+    cursor.execute("SELECT id, price FROM services WHERE name LIKE %s LIMIT 1", (f"%{service_name}%",))
+    service = cursor.fetchone()
+    
+    if not service:
+        cursor.close()
+        conn.close()
+        return f"I couldn't find a service matching '{service_name}'. Please check the menu."
+    
+    try:
+        sql = """INSERT INTO bookings 
+                 (customer_name, customer_email, customer_phone, service_id, booking_date, booking_time, total_amount, status) 
+                 VALUES (%s, %s, %s, %s, %s, %s, %s, 'pending')"""
+        cursor.execute(sql, (name, email, phone, service['id'], booking_date, booking_time, service['price']))
+        conn.commit()
+        booking_id = cursor.lastrowid
+        cursor.close()
+        conn.close()
+        return f"Success! Your appointment for {service_name} is scheduled for {booking_date} at {booking_time}. ||ID:{booking_id}||"
+    except Exception as e:
+        cursor.close()
+        conn.close()
+        return f"Technical Error: {str(e)}"
+
+@tool
+def get_booking_details(booking_id: str) -> str:
+    """Retrieves status and details for an existing booking ID."""
+    conn = get_db_connection()
+    if not conn: return "Database unavailable."
+    
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT b.id, b.customer_name, b.booking_date, b.booking_time, b.status, s.name as service_name 
+        FROM bookings b 
+        JOIN services s ON b.service_id = s.id 
+        WHERE b.id = %s
+    """, (booking_id,))
+    booking = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    
+    if not booking: return f"I couldn't find any booking with ID {booking_id}."
+    return json.dumps(booking, default=str)
+
+tools = [list_all_services, search_salon_info, check_availability, create_booking, get_booking_details]
+
 
 # ═══════════════════════════════════════════════════════════════
 # 5️⃣ AGENT SETUP

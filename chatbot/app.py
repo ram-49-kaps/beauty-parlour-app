@@ -13,12 +13,13 @@ from mysql.connector import Error
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-# ✅ LangChain Imports (Lightweight)
+# ✅ LangChain Imports (Modern API)
 from langchain_groq import ChatGroq
 from langchain_core.tools import tool
-from langchain.agents import initialize_agent, AgentType
+from langchain.agents import create_structured_chat_agent, AgentExecutor
 from langchain.memory import ConversationBufferMemory
 from langchain_core.messages import HumanMessage, AIMessage
+from langchain import hub
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -235,17 +236,34 @@ OUTPUT FORMATTING:
 # ✅ Initialize Memory
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
-# ✅ Initialize Agent (Legacy but Stable Method)
-agent_executor = initialize_agent(
-    tools=tools,
+# ✅ Get the structured chat prompt template
+try:
+    prompt = hub.pull("hwchase17/structured-chat-agent")
+except:
+    # Fallback if hub is unavailable
+    from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", SYSTEM_PROMPT),
+        MessagesPlaceholder("chat_history", optional=True),
+        ("human", "{input}"),
+        MessagesPlaceholder("agent_scratchpad"),
+    ])
+
+# ✅ Create Agent with Modern API
+agent = create_structured_chat_agent(
     llm=llm,
-    agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+    tools=tools,
+    prompt=prompt
+)
+
+# ✅ Create Agent Executor
+agent_executor = AgentExecutor(
+    agent=agent,
+    tools=tools,
+    memory=memory,
     verbose=True,
     handle_parsing_errors=True,
-    memory=memory,
-    agent_kwargs={
-        "prefix": SYSTEM_PROMPT + "\n\n" # Inject system prompt into the agent's prompt
-    }
+    max_iterations=5
 )
 
 # Global memory is now handled by the agent_executor's memory object instance.

@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+__pycache__/
+*.pyc
+
+# Environment Variables (Secrets) - CRITICAL
+.env
+.env.local
+.env.production
+.env.development
+Backend/.env
+frontend/.env
+chatbot/.env
+
+# Build Outputs
+dist/
+build/
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# User Specific / Sensitive Files
+production_schema.sql
+booking_db.sql
+*.sql
+*.log
+npm-debug.log*
+
+# IDEs
+.vscode/
+.idea/
+
+# Python Virtual Environments
+venv/
+.venv/
+env/
+.env/
+
+# Large Media Files
+*.MP4
+*.mp4
+*.mov

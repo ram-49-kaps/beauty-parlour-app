@@ -1,0 +1,21 @@
+{
+    "name": "Flawless By Drashti",
+    "short_name": "Flawless",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0c0a09",
+    "theme_color": "#0c0a09",
+    "description": "Luxury Beauty Studio in Surat. Book your appointments online.",
+    "icons": [
+        {
+            "src": "/Gallery/logo.jpg",
+            "sizes": "192x192",
+            "type": "image/jpeg"
+        },
+        {
+            "src": "/Gallery/logo.jpg",
+            "sizes": "512x512",
+            "type": "image/jpeg"
+        }
+    ]
+}

@@ -235,7 +235,7 @@ def create_booking(customer_name: str, customer_email: str, customer_phone: str,
 # 5️⃣ AGENT SETUP
 # ═══════════════════════════════════════════════════════════════
 
-SYSTEM_PROMPT = \"\"\"You are the professional and polite AI receptionist for Flawless by Drashti, a premium beauty studio in Surat.
+SYSTEM_PROMPT = """You are the professional and polite AI receptionist for Flawless by Drashti, a premium beauty studio in Surat.
 
 Your job is to help guests:
 - Discover services and prices.
@@ -285,7 +285,7 @@ MEMORY & CONTEXT (EXTREMELY IMPORTANT):
 
 OUTPUT FORMATTING:
 - **Time Slots**: NEVER list slots as bullet points. ALWAYS use the interactive tag: ||SLOTS: 10:00, 11:00, 12:00||.
-\"\"\"
+"""
 
 tools = [list_all_services, search_salon_info, check_availability, create_booking, get_booking_details]
 

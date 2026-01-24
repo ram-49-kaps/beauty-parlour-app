@@ -24,6 +24,9 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// ✅ Trust Proxy (Required for Render/Heroku/Vercel)
+app.set('trust proxy', 1);
+
 // 🔐 SECURITY
 app.use(helmet({
   contentSecurityPolicy: false,

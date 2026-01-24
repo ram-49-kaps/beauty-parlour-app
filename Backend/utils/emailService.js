@@ -8,18 +8,22 @@ dotenv.config();
 
 // Use CID for reliable image loading in emails
 const LOGO_URL = "cid:logo";
-// Absolute path to the logo file
-const LOGO_PATH = "/Users/kapadia/Desktop/Beauty_Parlour/frontend/public/Gallery/logo.jpg";
+// Use relative path for Render compatibility (Backend is root)
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const LOGO_PATH = path.join(__dirname, '../../frontend/public/Gallery/logo.jpg');
 
 const transporter = createTransport({
   host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: Number(process.env.EMAIL_PORT) || 587,
-  secure: false,
+  port: 465, // Use Secure SSL Port
+  secure: true, // Required for Port 465
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
   },
   tls: {
+    // Necessary for some hosted environments
     rejectUnauthorized: false
   }
 });

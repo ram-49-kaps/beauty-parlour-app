@@ -38,8 +38,3 @@ venv/
 .venv/
 env/
 .env/
-
-# Large Media Files
-*.MP4
-*.mp4
-*.mov

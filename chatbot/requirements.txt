@@ -4,7 +4,7 @@ python-dotenv
 mysql-connector-python
 requests
 gunicorn
-langchain
+langchain>=0.1.16
 langchain-groq
 langchain-core
 langchain-community

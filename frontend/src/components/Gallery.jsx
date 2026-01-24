@@ -1,7 +1,7 @@
 import { Instagram, ArrowRight, Play } from 'lucide-react';
 
 import { useState, useEffect } from 'react';
-import { API_BASE_URL } from '../config'; // Import Config
+import { API_BASE_URL, getImageUrl } from '../config'; // Import Config
 
 const Gallery = () => {
   const [galleryItems, setGalleryItems] = useState([]);
@@ -57,7 +57,7 @@ const Gallery = () => {
           const mappedData = data.map(item => ({
             id: item.id,
             type: item.type || 'image',
-            url: item.image_url,
+            url: getImageUrl(item.image_url), // ✅ Use helper
             category: item.category
           }));
           setGalleryItems(mappedData);

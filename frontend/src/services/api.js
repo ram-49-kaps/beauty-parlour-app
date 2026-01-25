@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+console.log('🔌 API Base URL:', API_URL); // Debugging: Check where requests are going
 
 const api = axios.create({
   baseURL: API_URL,
@@ -39,7 +40,7 @@ export const createBooking = (bookingData) => api.post('/bookings', bookingData)
 export const getUserBookings = () => api.get('/bookings/my-bookings');
 
 // ✅ FIX 2: Changed PATCH to PUT and fixed path
-export const rescheduleBooking = (id, date, time) => 
+export const rescheduleBooking = (id, date, time) =>
   api.put(`/bookings/${id}/reschedule`, { booking_date: date, booking_time: time });
 
 // --- ADMIN DASHBOARD APIS ---

@@ -105,25 +105,28 @@ export const createBooking = async (req, res) => {
       user_id: registeredUserId
     };
 
-    // 📩 Send Notifications
-    try {
-      // 1. Email
-      await emailService.sendBookingNotification(booking, service.name);
-
-      // 2. WhatsApp
-      if (bookingPhone) {
-        // Prepare object with service name for the template
-        const bookingForNotify = { ...booking, service_name: service.name };
-        await whatsappService.sendBookingStatusMessage(bookingForNotify, 'pending');
-      }
-    } catch (notifyError) {
-      console.error('Notification error:', notifyError);
-    }
-
+    // ✅ Response Sent Immediately (Fix for stuck loader)
     res.status(201).json({
       message: 'Booking created successfully',
       booking: { ...booking, service_name: service.name }
     });
+
+    // 📩 Send Notifications (Async Background Process)
+    (async () => {
+      try {
+        // 1. Email
+        await emailService.sendBookingNotification(booking, service.name);
+
+        // 2. WhatsApp
+        if (bookingPhone) {
+          // Prepare object with service name for the template
+          const bookingForNotify = { ...booking, service_name: service.name };
+          await whatsappService.sendBookingStatusMessage(bookingForNotify, 'pending');
+        }
+      } catch (notifyError) {
+        console.error('Notification error:', notifyError);
+      }
+    })();
 
   } catch (error) {
     console.error('Create booking error:', error);
@@ -214,37 +217,41 @@ export const updateBookingStatus = async (req, res) => {
 
     await query('UPDATE bookings SET status = ?, rejection_reason = ? WHERE id = ?', [finalStatus, finalReason, id]);
 
-    // 📩 Send Notifications (Email + WhatsApp)
-    try {
-      const phoneToSend = booking.customer_phone.startsWith('+') ? booking.customer_phone : '+91' + booking.customer_phone;
-
-      // Update the booking object in memory so the PDF/Notification has the NEW status
-      const updatedBooking = { ...booking, status: finalStatus };
-      // Also update the reason if rejected, for the notification template
-      if (finalStatus === ('rejected')) updatedBooking.rejection_reason = finalReason;
-
-      if (finalStatus === 'confirmed') {
-        // 1. Email (Now generates PDF internally with 'confirmed' status)
-        await emailService.sendBookingConfirmation(updatedBooking, updatedBooking.service_name);
-
-        // 2. WhatsApp (Rich Template)
-        await whatsappService.sendBookingStatusMessage(updatedBooking, 'confirmed');
-
-      } else if (finalStatus === 'rejected') {
-        // 1. Email - Now we attach PDF even for rejection per user request
-        await emailService.sendBookingRejection(updatedBooking, updatedBooking.service_name, finalReason);
-
-        // 2. WhatsApp
-        await whatsappService.sendBookingStatusMessage(updatedBooking, 'rejected');
-      }
-    } catch (notifyError) {
-      console.error('Notification error:', notifyError);
-    }
-
+    // ✅ Response Sent Immediately (Fix for stuck loader in Admin)
     res.json({
       message: `Booking ${finalStatus} successfully`,
       booking: { ...booking, status: finalStatus }
     });
+
+    // 📩 Send Notifications (Async Background Process)
+    (async () => {
+      try {
+        const phoneToSend = booking.customer_phone.startsWith('+') ? booking.customer_phone : '+91' + booking.customer_phone;
+
+        // Update the booking object in memory so the PDF/Notification has the NEW status
+        const updatedBooking = { ...booking, status: finalStatus };
+        // Also update the reason if rejected, for the notification template
+        if (finalStatus === ('rejected')) updatedBooking.rejection_reason = finalReason;
+
+        if (finalStatus === 'confirmed') {
+          // 1. Email (Now generates PDF internally with 'confirmed' status)
+          await emailService.sendBookingConfirmation(updatedBooking, updatedBooking.service_name);
+
+          // 2. WhatsApp (Rich Template)
+          await whatsappService.sendBookingStatusMessage(updatedBooking, 'confirmed');
+
+        } else if (finalStatus === 'rejected') {
+          // 1. Email - Now we attach PDF even for rejection per user request
+          await emailService.sendBookingRejection(updatedBooking, updatedBooking.service_name, finalReason);
+
+          // 2. WhatsApp
+          await whatsappService.sendBookingStatusMessage(updatedBooking, 'rejected');
+        }
+      } catch (notifyError) {
+        console.error('Notification error:', notifyError);
+      }
+    })();
+
   } catch (error) {
     console.error('Update booking error:', error);
     res.status(500).json({ message: 'Error updating booking' });

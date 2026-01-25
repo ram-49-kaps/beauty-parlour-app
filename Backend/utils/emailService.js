@@ -16,16 +16,19 @@ const LOGO_PATH = path.join(__dirname, '../../frontend/public/Gallery/logo.jpg')
 
 const transporter = createTransport({
   host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: 465,
-  secure: true, // true for 465, false for other ports
+  port: 587, // Back to 587 (STARTTLS)
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
   },
+  tls: {
+    rejectUnauthorized: false // Helps in some restrictive network environments
+  },
   logger: true,
   debug: true,
-  // Add timeouts to fail faster/clearer
-  connectionTimeout: 10000
+  connectionTimeout: 60000, // Increased to 60s
+  greetingTimeout: 30000
 });
 
 (async () => {

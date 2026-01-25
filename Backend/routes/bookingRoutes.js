@@ -15,9 +15,9 @@ import { authenticateToken, authorizeAdmin } from '../middleware/authMiddleware.
 
 const router = express.Router();
 
-// --- PUBLIC ROUTES ---
-// Create a booking (Allow guests or logged-in users)
-router.post('/', createBooking);
+// --- SECURED ROUTES ---
+// Create a booking (Now requires login)
+router.post('/', authenticateToken, createBooking);
 
 
 // --- USER ROUTES (Protected) ---

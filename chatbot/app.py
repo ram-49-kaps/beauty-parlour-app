@@ -300,16 +300,13 @@ def chat_endpoint():
         print(f"🤖 Output: {output_text}")
         
         return jsonify({"reply": output_text})
-        
-
-        
-        return jsonify({"reply": output_text})
 
     except Exception as e:
         print(f"❌ SYSTEM ERROR: {e}")
-        chat_history = []
-        return jsonify({"reply": "I'm having a brief brain freeze. Please try asking again."})
+        # Return a JSON error instead of crashing
+        return jsonify({"reply": "I'm having a brief brain freeze. Please try asking again."}), 500
 
 if __name__ == "__main__":
     print("🚀 API Server running on http://localhost:8000")
-    app.run(port=8000, debug=True)
+    # host='0.0.0.0' is REQUIRED for deployment on Render
+    app.run(host='0.0.0.0', port=8000, debug=True)

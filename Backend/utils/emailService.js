@@ -15,13 +15,17 @@ const __dirname = path.dirname(__filename);
 const LOGO_PATH = path.join(__dirname, '../../frontend/public/Gallery/logo.jpg');
 
 const transporter = createTransport({
-  service: 'gmail', // Built-in support for Gmail (automatically handles ports/secure)
+  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.EMAIL_PORT) || 587,
+  secure: false, // true for 465, false for other ports
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
   },
   logger: true,
-  debug: true
+  debug: true,
+  // Add timeouts to fail faster/clearer
+  connectionTimeout: 10000
 });
 
 (async () => {

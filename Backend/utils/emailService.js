@@ -1,31 +1,11 @@
-import fs from 'fs';
-import path from 'path';
 import dotenv from 'dotenv';
 import { generateBookingPDF } from './pdfService.js';
-import { fileURLToPath } from 'url';
 
 dotenv.config();
 
-// ✅ RESOLVE LOGO PATH AND READ AS BASE64 FOR RELIABLE EMBEDDING
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const LOGO_PATH = path.join(__dirname, '../../frontend/public/Gallery/logo.jpg');
-
-let LOGO_DATA_URI = '';
-try {
-  if (fs.existsSync(LOGO_PATH)) {
-    const bitmap = fs.readFileSync(LOGO_PATH);
-    const base64 = bitmap.toString('base64');
-    LOGO_DATA_URI = `data:image/jpeg;base64,${base64}`;
-    console.log("✅ Logo loaded for Base64 embedding");
-  } else {
-    console.warn("⚠️ Logo file not found at:", LOGO_PATH);
-    // Fallback URL if local file fails
-    LOGO_DATA_URI = "https://beauty-parlour-app.onrender.com/Gallery/logo.jpg";
-  }
-} catch (e) {
-  console.error("❌ Failed to load logo:", e);
-}
+// ✅ Use PUBLIC URL (Vercel) for reliable image loading
+// This avoids Gmail clipping (Base64 is too big) and avoids broken images (Render path issues)
+const LOGO_URL = "https://beauty-parlour-app.vercel.app/Gallery/logo.jpg";
 
 // ✅ NEW: Use Brevo API directly via fetch (bypasses SMTP port blocking)
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
@@ -110,7 +90,7 @@ const sendBookingConfirmation = async (booking, serviceName) => {
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
-        <img src="${LOGO_DATA_URI}" alt="Flawless Salon" style="${styles.logo}" />
+        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />
       </div>
       
       <div style="${styles.body}">
@@ -155,7 +135,7 @@ const sendBookingRejection = async (booking, serviceName, reason = '') => {
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
-        <img src="${LOGO_DATA_URI}" alt="Flawless Salon" style="${styles.logo}" />
+        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />
       </div>
       
       <div style="${styles.body}">
@@ -195,14 +175,14 @@ const sendBookingRejection = async (booking, serviceName, reason = '') => {
   }
 };
 
-// 3. NOTIFICATION (PENDING) EMAIL
+// 3. NOTIFICATION (PENDING) EMAIL - NOW WITH PDF
 const sendBookingNotification = async (booking, serviceName) => {
   const refNo = `FLAW-${booking.id}`;
 
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
-        <img src="${LOGO_DATA_URI}" alt="Flawless Salon" style="${styles.logo}" />
+        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />
       </div>
       
       <div style="${styles.body}">
@@ -218,7 +198,7 @@ const sendBookingNotification = async (booking, serviceName) => {
           <div style="${styles.detailRow}"><strong>Est. Amount:</strong> ₹${booking.total_amount}</div>
         </div>
         
-        <p style="${styles.text}">You will receive a final confirmation email shortly containing your booking receipt.</p>
+        <p style="${styles.text}">A preliminary receipt is attached. You will receive a final confirmation email shortly.</p>
         <p style="${styles.text}">Best,<br><strong>Team Flawless</strong></p>
       </div>
 
@@ -228,18 +208,29 @@ const sendBookingNotification = async (booking, serviceName) => {
     </div>
   `;
 
-  await sendEmailViaBrevo(
-    booking.customer_email,
-    'Appointment Request Received',
-    htmlContent
-  );
+  try {
+    // Generate Pending PDF
+    const pdfBuffer = await generateBookingPDF(booking, serviceName);
+
+    await sendEmailViaBrevo(
+      booking.customer_email,
+      'Appointment Request Received',
+      htmlContent,
+      [
+        { filename: `Booking_Request_${booking.id}.pdf`, content: pdfBuffer }
+      ]
+    );
+    console.log(`📨 Pending Notification sent to ${booking.customer_email}`);
+  } catch (error) {
+    console.error("❌ Failed to send pending email:", error);
+  }
 };
 
 const sendPasswordResetEmail = async (email, resetLink) => {
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
-        <img src="${LOGO_DATA_URI}" alt="Flawless Salon" style="${styles.logo}" />
+        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />
       </div>
       
       <div style="${styles.body}">

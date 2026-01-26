@@ -57,7 +57,7 @@ Hi ${customer_name},
 
 Your appointment request is under review! 
 
-*Ref No:* ${id}
+*Ref No:* FLAW-${id}
 *Service:* ${service_name}
 *Date:* ${dateStr}
 *Time:* ${booking_time}

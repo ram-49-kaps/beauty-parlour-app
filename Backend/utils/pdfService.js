@@ -43,7 +43,7 @@ export const generateBookingPDF = (booking, serviceName) => {
 
         // Ref No
         doc.font('Helvetica-Bold').text('Reference No:', leftX, startY);
-        doc.font('Helvetica').text(`${booking.id}`, rightX, startY);
+        doc.font('Helvetica').text(`FLAW-${booking.id}`, rightX, startY);
 
         // Customer Name
         doc.font('Helvetica-Bold').text('Customer Name:', leftX, startY + lineHeight);

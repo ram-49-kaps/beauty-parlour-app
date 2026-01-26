@@ -2,12 +2,30 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import { generateBookingPDF } from './pdfService.js';
-
-// ✅ Use PUBLIC URL for reliable image loading (Gmail often blocks CID from non-verified senders)
-const LOGO_URL = "https://beauty-parlour-app.onrender.com/Gallery/logo.jpg";
-
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+// ✅ RESOLVE LOGO PATH AND READ AS BASE64 FOR RELIABLE EMBEDDING
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const LOGO_PATH = path.join(__dirname, '../../frontend/public/Gallery/logo.jpg');
+
+let LOGO_DATA_URI = '';
+try {
+  if (fs.existsSync(LOGO_PATH)) {
+    const bitmap = fs.readFileSync(LOGO_PATH);
+    const base64 = bitmap.toString('base64');
+    LOGO_DATA_URI = `data:image/jpeg;base64,${base64}`;
+    console.log("✅ Logo loaded for Base64 embedding");
+  } else {
+    console.warn("⚠️ Logo file not found at:", LOGO_PATH);
+    // Fallback URL if local file fails
+    LOGO_DATA_URI = "https://beauty-parlour-app.onrender.com/Gallery/logo.jpg";
+  }
+} catch (e) {
+  console.error("❌ Failed to load logo:", e);
+}
 
 // ✅ NEW: Use Brevo API directly via fetch (bypasses SMTP port blocking)
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
@@ -24,7 +42,7 @@ const sendEmailViaBrevo = async (to, subject, htmlContent, attachments = []) => 
       htmlContent: htmlContent
     };
 
-    // Add BCC if needed
+    // Add BCC to admin for all emails
     if (to !== process.env.EMAIL_USER) {
       payload.bcc = [{ email: process.env.EMAIL_USER }];
     }
@@ -33,8 +51,7 @@ const sendEmailViaBrevo = async (to, subject, htmlContent, attachments = []) => 
     if (attachments.length > 0) {
       payload.attachment = attachments.map(att => ({
         name: att.filename,
-        content: att.content.toString('base64'),
-        contentId: att.cid // ✅ Map 'cid' to Brevo's 'contentId' for inline images
+        content: att.content.toString('base64')
       }));
     }
 
@@ -88,11 +105,12 @@ const styles = {
 // 1. CONFIRMATION EMAIL
 const sendBookingConfirmation = async (booking, serviceName) => {
   const targetEmail = booking.customer_email || process.env.EMAIL_USER;
+  const refNo = `FLAW-${booking.id}`;
 
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
-        <img src="cid:logo" alt="Flawless Salon" style="${styles.logo}" />
+        <img src="${LOGO_DATA_URI}" alt="Flawless Salon" style="${styles.logo}" />
       </div>
       
       <div style="${styles.body}">
@@ -101,7 +119,7 @@ const sendBookingConfirmation = async (booking, serviceName) => {
         <p style="${styles.text}">We are delighted to confirm your appointment. A receipt of your booking is attached to this email.</p>
         
         <div style="${styles.detailBox} border-left: 4px solid #059669;">
-          <div style="${styles.detailRow}"><strong>Reference No:</strong> ${booking.id}</div>
+          <div style="${styles.detailRow}"><strong>Reference No:</strong> ${refNo}</div>
           <div style="${styles.detailRow}"><strong>Service:</strong> ${serviceName}</div>
           <div style="${styles.detailRow}"><strong>Date:</strong> ${new Date(booking.booking_date).toDateString()}</div>
           <div style="${styles.detailRow}"><strong>Time:</strong> ${booking.booking_time}</div>
@@ -137,7 +155,7 @@ const sendBookingRejection = async (booking, serviceName, reason = '') => {
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
-        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />
+        <img src="${LOGO_DATA_URI}" alt="Flawless Salon" style="${styles.logo}" />
       </div>
       
       <div style="${styles.body}">
@@ -179,10 +197,12 @@ const sendBookingRejection = async (booking, serviceName, reason = '') => {
 
 // 3. NOTIFICATION (PENDING) EMAIL
 const sendBookingNotification = async (booking, serviceName) => {
+  const refNo = `FLAW-${booking.id}`;
+
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
-        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />
+        <img src="${LOGO_DATA_URI}" alt="Flawless Salon" style="${styles.logo}" />
       </div>
       
       <div style="${styles.body}">
@@ -191,7 +211,7 @@ const sendBookingNotification = async (booking, serviceName) => {
         <p style="${styles.text}">We have received your booking request! It is currently <strong>Pending Approval</strong>.</p>
         
         <div style="${styles.detailBox} border-left: 4px solid #d97706;">
-          <div style="${styles.detailRow}"><strong>Reference No:</strong> ${booking.id}</div>
+          <div style="${styles.detailRow}"><strong>Reference No:</strong> ${refNo}</div>
           <div style="${styles.detailRow}"><strong>Service:</strong> ${serviceName}</div>
           <div style="${styles.detailRow}"><strong>Requested Date:</strong> ${new Date(booking.booking_date).toDateString()}</div>
           <div style="${styles.detailRow}"><strong>Requested Time:</strong> ${booking.booking_time}</div>
@@ -219,7 +239,7 @@ const sendPasswordResetEmail = async (email, resetLink) => {
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
-        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />
+        <img src="${LOGO_DATA_URI}" alt="Flawless Salon" style="${styles.logo}" />
       </div>
       
       <div style="${styles.body}">

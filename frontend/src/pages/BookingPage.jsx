@@ -459,28 +459,30 @@ const BookingPage = () => {
                   <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-2 ml-1">
                     Preferred Time <span className="text-white">*</span>
                   </label>
-                  <div className="relative group">
-                    <Clock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-stone-600 w-4 h-4 group-focus-within:text-white transition-colors pointer-events-none" />
-                    <select
-                      name="booking_time"
-                      value={formData.booking_time}
-                      onChange={handleChange}
-                      className="w-full pl-12 pr-4 py-4 bg-stone-950 border border-white/10 rounded-xl focus:border-white/40 focus:outline-none text-white appearance-none cursor-pointer transition-all text-sm tracking-wide"
-                      required
-                    >
-                      <option value="">SELECT TIME</option>
-                      {timeSlots.map((time) => {
-                        const isBlocked = blockedTimes.includes(time);
-                        return (
-                          <option key={time} value={time} disabled={isBlocked} className={isBlocked ? "text-stone-600 bg-stone-900 line-through" : ""}>
-                            {time} {isBlocked ? '(Booked)' : ''}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                      <svg className="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    {timeSlots.map((time) => {
+                      const isBlocked = blockedTimes.includes(time);
+                      const isSelected = formData.booking_time === time;
+                      return (
+                        <button
+                          key={time}
+                          type="button"
+                          disabled={isBlocked}
+                          onClick={() => setFormData({ ...formData, booking_time: time })}
+                          className={`
+                            py-3 text-sm font-medium rounded-lg border transition-all duration-200
+                            ${isBlocked
+                              ? 'border-stone-800 text-stone-600 bg-stone-900/50 cursor-not-allowed decoration-stone-600'
+                              : isSelected
+                                ? 'bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-105'
+                                : 'bg-stone-950 border-white/10 text-stone-400 hover:border-white/50 hover:text-white hover:bg-stone-900'
+                            }
+                          `}
+                        >
+                          {time}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

@@ -3,20 +3,20 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavig
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import LoginModal from './components/LoginModal'; // 👈 Import LoginModal
-import HomePage from './pages/HomePage';
-import BookingPage from './pages/BookingPage';
-import ServicesPage from './pages/ServicesPage';
-import Dashboard from './pages/Dashboard';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import Profile from './pages/Profile';
-import AdminLogin from './pages/AdminLogin';
-import TermsPage from './pages/TermsPage';
-import PrivacyPage from './pages/PrivacyPage';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
+const Homepage = React.lazy(() => import('./pages/HomePage'));
+const BookingPage = React.lazy(() => import('./pages/BookingPage'));
+const ServicesPage = React.lazy(() => import('./pages/ServicesPage'));
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const Login = React.lazy(() => import('./pages/Login'));
+const Signup = React.lazy(() => import('./pages/Signup'));
+const Profile = React.lazy(() => import('./pages/Profile'));
+const AdminLogin = React.lazy(() => import('./pages/AdminLogin'));
+const TermsPage = React.lazy(() => import('./pages/TermsPage'));
+const PrivacyPage = React.lazy(() => import('./pages/PrivacyPage'));
+const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
 import SplashScreen from './components/SplashScreen';
-import ChatWidget from './components/ChatWidget'; // 👈 Import this
+import ChatWidget from './components/ChatWidget';
 
 // 🔐 1. DEFINE YOUR SECRET URL
 // Even if someone guesses the shortcut, they still won't see this URL unless they know it exists.
@@ -115,7 +115,6 @@ const Layout = ({ children }) => {
     </div>
   );
 };
-
 function App() {
   const [showSplash, setShowSplash] = useState(true);
 
@@ -127,25 +126,29 @@ function App() {
     <AuthProvider>
       <Router>
         <Layout>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/services" element={<ServicesPage />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password/:token" element={<ResetPassword />} />
+          {/* Suspense shows LoadingScreen while the lazy chunk is downloading */}
+          <React.Suspense fallback={<LoadingScreen />}>
+            <Routes>
+              {/* Load Homepage normally or lazy (Lazy is fine if above the fold is managed, but let's stick to consistent lazy for now to split bundles) */}
+              <Route path="/" element={<Homepage />} />
+              <Route path="/services" element={<ServicesPage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-            {/* 🔐 THE SECRET ROUTE */}
-            <Route path={SECRET_ADMIN_URL} element={<AdminLogin />} />
+              {/* 🔐 THE SECRET ROUTE */}
+              <Route path={SECRET_ADMIN_URL} element={<AdminLogin />} />
 
-            <Route path="/booking" element={<CustomerRoute><BookingPage /></CustomerRoute>} />
-            <Route path="/profile" element={<CustomerRoute><Profile /></CustomerRoute>} />
-            <Route path="/admin-dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
+              <Route path="/booking" element={<CustomerRoute><BookingPage /></CustomerRoute>} />
+              <Route path="/profile" element={<CustomerRoute><Profile /></CustomerRoute>} />
+              <Route path="/admin-dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </React.Suspense>
         </Layout>
       </Router>
     </AuthProvider>

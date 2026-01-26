@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin-dashboard
+Disallow: /secure-owner-portal-2026
+Disallow: /profile
+
+Sitemap: https://flawlessbydrashti.vercel.app/sitemap.xml

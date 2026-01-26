@@ -38,8 +38,10 @@ app.use(helmet({
 // 🌍 CORS
 app.use(cors({
   origin: [
-    process.env.FRONTEND_URL || 'http://localhost:5173',
-    (process.env.FRONTEND_URL || 'http://localhost:5173') + '/'
+    process.env.FRONTEND_URL,
+    'https://flawlessbydrashti.vercel.app', // Explicitly allow new domain
+    'https://beauty-parlour-app.vercel.app', // Allow old domain too (just in case)
+    'http://localhost:5173'
   ],
   credentials: true,
 }));

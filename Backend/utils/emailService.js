@@ -1,5 +1,13 @@
+import fs from 'fs';
+import path from 'path';
 import dotenv from 'dotenv';
 import { generateBookingPDF } from './pdfService.js';
+
+// Restore LOGO_PATH for reading the file
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const LOGO_PATH = path.join(__dirname, '../../frontend/public/Gallery/logo.jpg');
 
 dotenv.config();
 
@@ -27,7 +35,8 @@ const sendEmailViaBrevo = async (to, subject, htmlContent, attachments = []) => 
     if (attachments.length > 0) {
       payload.attachment = attachments.map(att => ({
         name: att.filename,
-        content: att.content.toString('base64')
+        content: att.content.toString('base64'),
+        contentId: att.cid // ✅ Map 'cid' to Brevo's 'contentId' for inline images
       }));
     }
 
@@ -85,7 +94,7 @@ const sendBookingConfirmation = async (booking, serviceName) => {
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
-        <h1 style="${styles.brand}">FLAWLESS</h1>
+        <img src="cid:logo" alt="Flawless Salon" style="${styles.logo}" />
       </div>
       
       <div style="${styles.body}">
@@ -112,12 +121,16 @@ const sendBookingConfirmation = async (booking, serviceName) => {
   `;
 
   const pdfBuffer = await generateBookingPDF(booking, serviceName);
+  const logoBuffer = fs.readFileSync(LOGO_PATH);
 
   await sendEmailViaBrevo(
     targetEmail,
     'Appointment Confirmed - Flawless Salon',
     htmlContent,
-    [{ filename: `Booking_Receipt_${booking.id}.pdf`, content: pdfBuffer }]
+    [
+      { filename: `Booking_Receipt_${booking.id}.pdf`, content: pdfBuffer },
+      { filename: 'logo.jpg', content: logoBuffer, cid: 'logo' }
+    ]
   );
 
   console.log(`📨 Booking confirmation sent to ${targetEmail}`);
@@ -128,7 +141,7 @@ const sendBookingRejection = async (booking, serviceName, reason = '') => {
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
-        <h1 style="${styles.brand}">FLAWLESS</h1>
+        <img src="cid:logo" alt="Flawless Salon" style="${styles.logo}" />
       </div>
       
       <div style="${styles.body}">
@@ -153,11 +166,16 @@ const sendBookingRejection = async (booking, serviceName, reason = '') => {
 
   try {
     const pdfBuffer = await generateBookingPDF(booking, serviceName);
+    const logoBuffer = fs.readFileSync(LOGO_PATH);
+
     await sendEmailViaBrevo(
       booking.customer_email,
       'IMPORTANT: Update Regarding Your Appointment',
       htmlContent,
-      [{ filename: `Booking_Status_${booking.id}.pdf`, content: pdfBuffer }]
+      [
+        { filename: `Booking_Status_${booking.id}.pdf`, content: pdfBuffer },
+        { filename: 'logo.jpg', content: logoBuffer, cid: 'logo' }
+      ]
     );
     console.log(`📨 Rejection Email Sent to ${booking.customer_email}`);
   } catch (err) {
@@ -170,7 +188,7 @@ const sendBookingNotification = async (booking, serviceName) => {
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
-        <h1 style="${styles.brand}">FLAWLESS</h1>
+        <img src="cid:logo" alt="Flawless Salon" style="${styles.logo}" />
       </div>
       
       <div style="${styles.body}">
@@ -196,10 +214,12 @@ const sendBookingNotification = async (booking, serviceName) => {
     </div>
   `;
 
+  const logoBuffer = fs.readFileSync(LOGO_PATH);
   await sendEmailViaBrevo(
     booking.customer_email,
     'Appointment Request Received',
-    htmlContent
+    htmlContent,
+    [{ filename: 'logo.jpg', content: logoBuffer, cid: 'logo' }]
   );
 };
 
@@ -207,7 +227,7 @@ const sendPasswordResetEmail = async (email, resetLink) => {
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
-        <h1 style="${styles.brand}">FLAWLESS</h1>
+        <img src="cid:logo" alt="Flawless Salon" style="${styles.logo}" />
       </div>
       
       <div style="${styles.body}">
@@ -227,10 +247,12 @@ const sendPasswordResetEmail = async (email, resetLink) => {
     </div>
   `;
 
+  const logoBuffer = fs.readFileSync(LOGO_PATH);
   await sendEmailViaBrevo(
     email,
     'Reset Your Password - Flawless Salon',
-    htmlContent
+    htmlContent,
+    [{ filename: 'logo.jpg', content: logoBuffer, cid: 'logo' }]
   );
 };
 

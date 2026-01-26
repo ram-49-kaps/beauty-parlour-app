@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, Mail, Phone, User, MessageSquare, CheckCircle, Sparkles, ArrowRight, IndianRupee, Plus, Check } from 'lucide-react';
-import { getServices, createBooking } from '../services/api';
+import { getServices, createBooking, getBookedSlots } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const BookingPage = () => {
@@ -11,13 +11,14 @@ const BookingPage = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
-  
+
   // Selection States
   const [selectedAddOns, setSelectedAddOns] = useState([]); // Array of IDs
+  const [blockedTimes, setBlockedTimes] = useState([]); // Array of unavailable start times
 
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState({
     customer_name: user?.name || '',
     customer_email: user?.email || '',
@@ -46,12 +47,12 @@ const BookingPage = () => {
 
       // 1. LOGIC: Filter Main vs Add-ons
       // We assume "Lash" and "Lens" are extras. Everything else is a main service.
-      const extras = allServices.filter(s => 
-        s.name.toLowerCase().includes('lash') || 
+      const extras = allServices.filter(s =>
+        s.name.toLowerCase().includes('lash') ||
         s.name.toLowerCase().includes('lens')
       );
-      const main = allServices.filter(s => 
-        !s.name.toLowerCase().includes('lash') && 
+      const main = allServices.filter(s =>
+        !s.name.toLowerCase().includes('lash') &&
         !s.name.toLowerCase().includes('lens')
       );
 
@@ -60,6 +61,52 @@ const BookingPage = () => {
     } catch (error) {
       console.error('Error fetching services:', error);
       setError('Failed to load services. Please refresh the page.');
+    }
+  };
+
+  // 1.1 LOGIC: Fetch Blocked Slots when Date Changes
+  useEffect(() => {
+    if (formData.booking_date) {
+      fetchBlockedSlots(formData.booking_date);
+    } else {
+      setBlockedTimes([]);
+    }
+  }, [formData.booking_date]);
+
+  const fetchBlockedSlots = async (date) => {
+    try {
+      const response = await getBookedSlots(date);
+      // response.data is array of objects: { time: "10:00:00", duration: 60 }
+
+      // Calculate all 30-min intervals that are occupied
+      const occupied = new Set();
+
+      response.data.forEach(booking => {
+        const start = new Date(`${date}T${booking.time}`);
+        // If parsing fails (e.g. time format issue), skip
+        if (isNaN(start.getTime())) return;
+
+        // Mark the start time as blocked
+        const startStr = booking.time.substring(0, 5); // "10:00"
+        occupied.add(startStr);
+
+        // If duration > 30, block subsequent slots
+        // This is a simple approximation. For strict logic, we'd check overlap.
+        // Assuming slots are 30 mins apart.
+        const durationMins = booking.duration || 60; // Default 60 if null
+        const slotsCount = Math.ceil(durationMins / 30);
+
+        for (let i = 1; i < slotsCount; i++) {
+          const nextSlot = new Date(start.getTime() + i * 30 * 60000);
+          const h = nextSlot.getHours().toString().padStart(2, '0');
+          const m = nextSlot.getMinutes().toString().padStart(2, '0');
+          occupied.add(`${h}:${m}`);
+        }
+      });
+
+      setBlockedTimes(Array.from(occupied));
+    } catch (err) {
+      console.error("Failed to fetch blocked slots", err);
     }
   };
 
@@ -101,8 +148,8 @@ const BookingPage = () => {
     setError('');
 
     // Validation
-    if (!formData.customer_name || !formData.customer_email || !formData.customer_phone || 
-        !formData.service_id || !formData.booking_date || !formData.booking_time) {
+    if (!formData.customer_name || !formData.customer_email || !formData.customer_phone ||
+      !formData.service_id || !formData.booking_date || !formData.booking_time) {
       setError('Please fill in all required fields');
       setLoading(false);
       return;
@@ -125,7 +172,7 @@ const BookingPage = () => {
     const selectedDate = new Date(formData.booking_date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     if (selectedDate < today) {
       setError('Please select a future date');
       setLoading(false);
@@ -139,8 +186,8 @@ const BookingPage = () => {
         .map(s => s.name)
         .join(', ');
 
-      const finalNotes = selectedAddOnNames 
-        ? `Extras: ${selectedAddOnNames}. \nUser Notes: ${formData.notes}` 
+      const finalNotes = selectedAddOnNames
+        ? `Extras: ${selectedAddOnNames}. \nUser Notes: ${formData.notes}`
         : formData.notes;
 
       const bookingData = {
@@ -150,7 +197,7 @@ const BookingPage = () => {
       };
 
       await createBooking(bookingData);
-      
+
       setSuccess(true);
       // Reset Form
       setFormData({
@@ -192,7 +239,7 @@ const BookingPage = () => {
   return (
     <div className="min-h-screen bg-stone-950 font-sans text-white pt-40 pb-20 px-6 selection:bg-white selection:text-black py-20">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
-        
+
         {/* Header */}
         <div className="text-center mb-16 animate-fadeInUp">
           <div className="inline-block py-1 px-4 border border-white/10 rounded-full bg-white/5 backdrop-blur-sm mb-6">
@@ -226,7 +273,7 @@ const BookingPage = () => {
         {/* Error Message */}
         {error && (
           <div className="mb-8 bg-red-950/30 border border-red-500/30 rounded-xl p-6 text-red-300 shadow-2xl animate-fadeInUp text-sm font-light flex items-center gap-3">
-             <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
             {error}
           </div>
         )}
@@ -234,14 +281,14 @@ const BookingPage = () => {
         {/* Booking Form */}
         <div className="bg-stone-900 border border-white/5 rounded-2xl shadow-2xl overflow-hidden animate-fadeInUp" style={{ animationDelay: '0.1s' }}>
           <form onSubmit={handleSubmit} className="p-8 md:p-12">
-            
+
             {/* Personal Information */}
             <div className="space-y-8">
               <div className="flex items-center gap-3 border-b border-white/5 pb-4">
                 <User className="w-5 h-5 text-stone-400" />
                 <h2 className="text-xl font-light tracking-wide text-white">Client Details</h2>
               </div>
-              
+
               <div className="grid gap-6">
                 <div>
                   <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-2 ml-1">
@@ -305,7 +352,7 @@ const BookingPage = () => {
                 <Sparkles className="w-5 h-5 text-stone-400" />
                 <h2 className="text-xl font-light tracking-wide text-white">Treatment Selection</h2>
               </div>
-              
+
               {/* MAIN SERVICE DROPDOWN */}
               <div>
                 <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-2 ml-1">
@@ -326,7 +373,7 @@ const BookingPage = () => {
                       </option>
                     ))}
                   </select>
-                   <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                  <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
                     <svg className="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                   </div>
                 </div>
@@ -336,8 +383,8 @@ const BookingPage = () => {
               {selectedMainService && (
                 <div className="bg-stone-800/50 p-6 rounded-xl border border-white/5 animate-fadeInUp flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
-                     <h3 className="text-lg font-light text-white mb-1">{selectedMainService.name}</h3>
-                     <p className="text-stone-500 text-xs font-light tracking-wide">{selectedMainService.description}</p>
+                    <h3 className="text-lg font-light text-white mb-1">{selectedMainService.name}</h3>
+                    <p className="text-stone-500 text-xs font-light tracking-wide">{selectedMainService.description}</p>
                   </div>
                   <div className="flex items-center gap-6 border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-6 w-full md:w-auto mt-2 md:mt-0">
                     <div className="flex items-center gap-2">
@@ -354,16 +401,16 @@ const BookingPage = () => {
                   <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-4 ml-1 flex items-center gap-2">
                     <Plus className="w-3 h-3" /> Enhance Your Experience (Optional)
                   </label>
-                  
+
                   <div className="grid sm:grid-cols-2 gap-4">
                     {addOnServices.map((extra) => (
-                      <div 
+                      <div
                         key={extra.id}
                         onClick={() => toggleAddOn(extra.id)}
                         className={`
                           cursor-pointer relative p-4 rounded-xl border transition-all duration-300 flex items-center justify-between
-                          ${selectedAddOns.includes(extra.id) 
-                            ? 'bg-stone-800 border-white/40 shadow-lg' 
+                          ${selectedAddOns.includes(extra.id)
+                            ? 'bg-stone-800 border-white/40 shadow-lg'
                             : 'bg-stone-950 border-white/10 hover:border-white/20 hover:bg-stone-900'}
                         `}
                       >
@@ -402,7 +449,7 @@ const BookingPage = () => {
                       value={formData.booking_date}
                       onChange={handleChange}
                       min={todayStr}
-                      className="w-full pl-12 pr-4 py-4 bg-stone-950 border border-white/10 rounded-xl focus:border-white/40 focus:outline-none text-white placeholder-stone-700 transition-all text-sm tracking-wide uppercase"
+                      className="w-full pl-12 pr-4 py-4 bg-stone-950 border border-white/10 rounded-xl focus:border-white/40 focus:outline-none text-white placeholder-stone-700 transition-all text-sm tracking-wide uppercase [color-scheme:dark]"
                       required
                     />
                   </div>
@@ -422,13 +469,16 @@ const BookingPage = () => {
                       required
                     >
                       <option value="">SELECT TIME</option>
-                      {timeSlots.map((time) => (
-                        <option key={time} value={time}>
-                          {time}
-                        </option>
-                      ))}
+                      {timeSlots.map((time) => {
+                        const isBlocked = blockedTimes.includes(time);
+                        return (
+                          <option key={time} value={time} disabled={isBlocked} className={isBlocked ? "text-stone-600 bg-stone-900 line-through" : ""}>
+                            {time} {isBlocked ? '(Booked)' : ''}
+                          </option>
+                        );
+                      })}
                     </select>
-                     <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
                       <svg className="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
                   </div>
@@ -455,15 +505,15 @@ const BookingPage = () => {
 
             {/* TOTAL PRICE BAR & SUBMIT */}
             <div className="mt-12 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-              
+
               <div className="text-center md:text-left">
                 <p className="text-stone-500 text-xs font-bold uppercase tracking-widest mb-1">Total Payable</p>
                 <div className="flex items-center gap-2 justify-center md:justify-start">
-                   <IndianRupee className="w-6 h-6 text-white" />
-                   <span className="text-4xl font-light text-white tracking-tight">{calculateTotal()}</span>
+                  <IndianRupee className="w-6 h-6 text-white" />
+                  <span className="text-4xl font-light text-white tracking-tight">{calculateTotal()}</span>
                 </div>
                 {selectedAddOns.length > 0 && (
-                   <p className="text-stone-500 text-xs mt-2">Includes {selectedAddOns.length} extra(s)</p>
+                  <p className="text-stone-500 text-xs mt-2">Includes {selectedAddOns.length} extra(s)</p>
                 )}
               </div>
 
@@ -507,7 +557,7 @@ const BookingPage = () => {
               <span className="text-white mt-0.5">•</span>
               <span>Cancellations must be made at least 24 hours in advance to avoid a cancellation fee.</span>
             </div>
-             <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3">
               <span className="text-white mt-0.5">•</span>
               <span>Confirmation emails are sent immediately upon successful booking request.</span>
             </div>

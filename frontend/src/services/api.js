@@ -39,6 +39,9 @@ export const createBooking = (bookingData) => api.post('/bookings', bookingData)
 // ✅ FIX 1: Added '/bookings' prefix (matches server.js + bookingRoutes.js)
 export const getUserBookings = () => api.get('/bookings/my-bookings');
 
+// ✅ NEW: Get Blocked Slots
+export const getBookedSlots = (date) => api.get(`/bookings/slots?date=${date}`);
+
 // ✅ FIX 2: Changed PATCH to PUT and fixed path
 export const rescheduleBooking = (id, date, time) =>
   api.put(`/bookings/${id}/reschedule`, { booking_date: date, booking_time: time });

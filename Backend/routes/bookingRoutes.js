@@ -2,6 +2,7 @@ import express from 'express';
 import {
     createBooking,
     getAllBookings,
+    getBookedSlots, // ✅ Imported
     getUserBookings,
     updateBookingStatus,
     rescheduleBooking,
@@ -14,6 +15,10 @@ import {
 import { authenticateToken, authorizeAdmin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+
+// --- PUBLIC ROUTE ---
+// Get blocked slots for a date (Required for calendar UI)
+router.get('/slots', getBookedSlots);
 
 // --- SECURED ROUTES ---
 // Create a booking (Now requires login)

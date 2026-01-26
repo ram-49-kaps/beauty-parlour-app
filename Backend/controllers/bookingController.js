@@ -16,6 +16,38 @@ const calculateEndTime = (date, time, duration) => {
 };
 
 
+// --------------------- GET BOOKED SLOTS (For UI Blocking) ---------------------
+export const getBookedSlots = async (req, res) => {
+  try {
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({ message: 'Date parameter is required' });
+    }
+
+    const queryStr = `
+      SELECT booking_time, s.duration 
+      FROM bookings b
+      JOIN services s ON b.service_id = s.id
+      WHERE booking_date = ? 
+      AND b.status NOT IN ('rejected', 'cancelled')
+    `;
+
+    const bookings = await query(queryStr, [date]);
+
+    // Return simple array of blocked times
+    const slots = bookings.map(b => ({
+      time: b.booking_time, // e.g., "10:00:00"
+      duration: b.duration
+    }));
+
+    res.json(slots);
+  } catch (error) {
+    console.error('Get slots error:', error);
+    res.status(500).json({ message: 'Error fetching blocks' });
+  }
+};
+
 // --------------------- CREATE BOOKING ---------------------
 export const createBooking = async (req, res) => {
   try {

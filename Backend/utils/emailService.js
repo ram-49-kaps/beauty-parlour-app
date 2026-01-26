@@ -3,11 +3,9 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { generateBookingPDF } from './pdfService.js';
 
-// Restore LOGO_PATH for reading the file
-import { fileURLToPath } from 'url';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const LOGO_PATH = path.join(__dirname, '../../frontend/public/Gallery/logo.jpg');
+// ✅ Use PUBLIC URL for reliable image loading (Gmail often blocks CID from non-verified senders)
+const LOGO_URL = "https://beauty-parlour-app.onrender.com/Gallery/logo.jpg";
+
 
 dotenv.config();
 
@@ -121,15 +119,13 @@ const sendBookingConfirmation = async (booking, serviceName) => {
   `;
 
   const pdfBuffer = await generateBookingPDF(booking, serviceName);
-  const logoBuffer = fs.readFileSync(LOGO_PATH);
 
   await sendEmailViaBrevo(
     targetEmail,
     'Appointment Confirmed - Flawless Salon',
     htmlContent,
     [
-      { filename: `Booking_Receipt_${booking.id}.pdf`, content: pdfBuffer },
-      { filename: 'logo.jpg', content: logoBuffer, cid: 'logo' }
+      { filename: `Booking_Receipt_${booking.id}.pdf`, content: pdfBuffer }
     ]
   );
 
@@ -141,7 +137,7 @@ const sendBookingRejection = async (booking, serviceName, reason = '') => {
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
-        <img src="cid:logo" alt="Flawless Salon" style="${styles.logo}" />
+        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />
       </div>
       
       <div style="${styles.body}">
@@ -166,15 +162,13 @@ const sendBookingRejection = async (booking, serviceName, reason = '') => {
 
   try {
     const pdfBuffer = await generateBookingPDF(booking, serviceName);
-    const logoBuffer = fs.readFileSync(LOGO_PATH);
 
     await sendEmailViaBrevo(
       booking.customer_email,
       'IMPORTANT: Update Regarding Your Appointment',
       htmlContent,
       [
-        { filename: `Booking_Status_${booking.id}.pdf`, content: pdfBuffer },
-        { filename: 'logo.jpg', content: logoBuffer, cid: 'logo' }
+        { filename: `Booking_Status_${booking.id}.pdf`, content: pdfBuffer }
       ]
     );
     console.log(`📨 Rejection Email Sent to ${booking.customer_email}`);
@@ -188,7 +182,7 @@ const sendBookingNotification = async (booking, serviceName) => {
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
-        <img src="cid:logo" alt="Flawless Salon" style="${styles.logo}" />
+        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />
       </div>
       
       <div style="${styles.body}">
@@ -214,12 +208,10 @@ const sendBookingNotification = async (booking, serviceName) => {
     </div>
   `;
 
-  const logoBuffer = fs.readFileSync(LOGO_PATH);
   await sendEmailViaBrevo(
     booking.customer_email,
     'Appointment Request Received',
-    htmlContent,
-    [{ filename: 'logo.jpg', content: logoBuffer, cid: 'logo' }]
+    htmlContent
   );
 };
 
@@ -227,7 +219,7 @@ const sendPasswordResetEmail = async (email, resetLink) => {
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
-        <img src="cid:logo" alt="Flawless Salon" style="${styles.logo}" />
+        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />
       </div>
       
       <div style="${styles.body}">
@@ -247,12 +239,10 @@ const sendPasswordResetEmail = async (email, resetLink) => {
     </div>
   `;
 
-  const logoBuffer = fs.readFileSync(LOGO_PATH);
   await sendEmailViaBrevo(
     email,
     'Reset Your Password - Flawless Salon',
-    htmlContent,
-    [{ filename: 'logo.jpg', content: logoBuffer, cid: 'logo' }]
+    htmlContent
   );
 };
 

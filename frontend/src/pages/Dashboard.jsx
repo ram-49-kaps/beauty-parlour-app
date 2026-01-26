@@ -420,23 +420,54 @@ const Dashboard = () => {
         {/* STATS & CHARTS */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Stat Cards */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-stone-900/50 border border-white/10 p-6 rounded-2xl relative overflow-hidden group">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all" />
-                <div className="flex justify-between items-start mb-4 relative z-10"><div><p className="text-stone-400 text-xs font-bold uppercase tracking-widest">Total Bookings</p><h3 className="text-3xl text-white font-light mt-1">{stats.totalBookings}</h3></div><div className="p-2 rounded-lg bg-blue-500/10 text-blue-400"><LayoutDashboard size={20} /></div></div>
+            {/* Stat Cards - Optimized for Mobile Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+              {/* Card 1: Total */}
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-stone-900 border border-white/10 p-4 rounded-xl relative overflow-hidden group">
+                <div className="absolute -right-4 -top-4 w-16 h-16 bg-blue-500/10 rounded-full blur-xl group-hover:bg-blue-500/20 transition-all" />
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wider">Bookings</p>
+                    <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-400"><LayoutDashboard size={14} /></div>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl text-white font-light">{stats.totalBookings}</h3>
+                </div>
               </motion.div>
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-stone-900/50 border border-white/10 p-6 rounded-2xl relative overflow-hidden group">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-yellow-500/10 rounded-full blur-2xl group-hover:bg-yellow-500/20 transition-all" />
-                <div className="flex justify-between items-start mb-4 relative z-10"><div><p className="text-stone-400 text-xs font-bold uppercase tracking-widest">Pending</p><h3 className="text-3xl text-white font-light mt-1">{stats.pendingBookings}</h3></div><div className="p-2 rounded-lg bg-yellow-500/10 text-yellow-400"><Clock size={20} /></div></div>
+
+              {/* Card 2: Pending */}
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-stone-900 border border-white/10 p-4 rounded-xl relative overflow-hidden group">
+                <div className="absolute -right-4 -top-4 w-16 h-16 bg-yellow-500/10 rounded-full blur-xl group-hover:bg-yellow-500/20 transition-all" />
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wider">Pending</p>
+                    <div className="p-1.5 rounded-md bg-yellow-500/10 text-yellow-400"><Clock size={14} /></div>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl text-white font-light">{stats.pendingBookings}</h3>
+                </div>
               </motion.div>
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-stone-900/50 border border-white/10 p-6 rounded-2xl relative overflow-hidden group">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-green-500/10 rounded-full blur-2xl group-hover:bg-green-500/20 transition-all" />
-                <div className="flex justify-between items-start mb-4 relative z-10"><div><p className="text-stone-400 text-xs font-bold uppercase tracking-widest">Confirmed</p><h3 className="text-3xl text-white font-light mt-1">{stats.confirmedBookings}</h3></div><div className="p-2 rounded-lg bg-green-500/10 text-green-400"><CheckCircle size={20} /></div></div>
+
+              {/* Card 3: Confirmed */}
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-stone-900 border border-white/10 p-4 rounded-xl relative overflow-hidden group">
+                <div className="absolute -right-4 -top-4 w-16 h-16 bg-green-500/10 rounded-full blur-xl group-hover:bg-green-500/20 transition-all" />
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wider">Confirmed</p>
+                    <div className="p-1.5 rounded-md bg-green-500/10 text-green-400"><CheckCircle size={14} /></div>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl text-white font-light">{stats.confirmedBookings}</h3>
+                </div>
               </motion.div>
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-stone-900/50 border border-white/10 p-6 rounded-2xl relative overflow-hidden group">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all" />
-                <div className="flex justify-between items-start mb-4 relative z-10"><div><p className="text-stone-400 text-xs font-bold uppercase tracking-widest">Revenue</p><h3 className="text-3xl text-white font-light mt-1">₹{stats.totalEarnings}</h3></div><div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400"><IndianRupee size={20} /></div></div>
+
+              {/* Card 4: Revenue */}
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-stone-900 border border-white/10 p-4 rounded-xl relative overflow-hidden group">
+                <div className="absolute -right-4 -top-4 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition-all" />
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wider">Revenue</p>
+                    <div className="p-1.5 rounded-md bg-emerald-500/10 text-emerald-400"><IndianRupee size={14} /></div>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl text-white font-light">₹{stats.totalEarnings}</h3>
+                </div>
               </motion.div>
             </div>
 
@@ -536,58 +567,61 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* 🔹 MOBILE VIEW: CARDS */}
-            <div className="md:hidden space-y-4">
+            {/* 🔹 MOBILE VIEW: COMPACT CARDS */}
+            <div className="md:hidden space-y-3">
               {loading ? <div className="text-center text-stone-500 p-8">Loading...</div> :
                 filteredBookings.length === 0 ? <div className="text-center text-stone-500 p-8">No bookings found.</div> :
                   filteredBookings.map((booking) => (
-                    <div key={booking.id} className="bg-stone-900/50 border border-white/10 rounded-2xl p-5 space-y-4 relative overflow-hidden">
-                      <div className={`absolute top-0 right-0 px-3 py-1 text-[10px] font-bold uppercase rounded-bl-xl border-l border-b border-white/10 ${getStatusColor(booking.status)}`}>
-                        {booking.status}
+                    <div key={booking.id} className="bg-stone-900 border border-white/10 rounded-xl p-4 relative overflow-hidden">
+                      {/* Top Row: Date & Status */}
+                      <div className="flex justify-between items-center mb-3 border-b border-white/5 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">
+                            {new Date(booking.booking_date).toLocaleDateString()} • {booking.booking_time}
+                          </span>
+                        </div>
+                        <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded border ${getStatusColor(booking.status)}`}>
+                          {booking.status}
+                        </span>
                       </div>
 
-                      <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-stone-800 to-black flex items-center justify-center border border-white/10 text-white font-bold">
-                          {booking.customer_name.charAt(0)}
+                      {/* Middle: Client & Service */}
+                      <div className="flex justify-between items-start gap-3 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center border border-white/10 text-white font-bold text-xs">
+                            {booking.customer_name.charAt(0)}
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-white leading-tight">{booking.customer_name}</h4>
+                            <p className="text-[10px] text-stone-500">{booking.service_name}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="text-white font-medium">{booking.customer_name}</h4>
-                          <p className="text-xs text-stone-500">{booking.customer_email}</p>
-                          <p className="text-xs text-stone-500 mt-1">{booking.customer_phone}</p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3 text-xs border-t border-b border-white/5 py-4">
-                        <div>
-                          <p className="text-stone-500 uppercase tracking-wider mb-1">Service</p>
-                          <p className="text-white font-medium">{booking.service_name}</p>
-                        </div>
-                        <div>
-                          <p className="text-stone-500 uppercase tracking-wider mb-1">Amount</p>
-                          <p className="text-white font-medium">₹{booking.total_amount}</p>
-                        </div>
-                        <div>
-                          <p className="text-stone-500 uppercase tracking-wider mb-1">Date</p>
-                          <p className="text-white font-medium">{new Date(booking.booking_date).toLocaleDateString()}</p>
-                        </div>
-                        <div>
-                          <p className="text-stone-500 uppercase tracking-wider mb-1">Time</p>
-                          <p className="text-white font-medium">{booking.booking_time}</p>
+                        <div className="text-right">
+                          <span className="block text-sm font-light text-white">₹{booking.total_amount}</span>
                         </div>
                       </div>
 
-                      <div className="flex justify-end gap-3 pt-2">
+                      {/* Bottom: Actions */}
+                      <div className="flex gap-2">
                         {booking.status === 'pending' && (
                           <>
-                            <button onClick={() => handleStatusUpdate(booking.id, 'confirmed')} className="flex-1 bg-green-500/10 text-green-400 border border-green-500/20 py-2 rounded-lg text-xs font-bold uppercase hover:bg-green-500 hover:text-white transition">Accept</button>
-                            <button onClick={() => setSelectedBooking(booking)} className="flex-1 bg-red-500/10 text-red-400 border border-red-500/20 py-2 rounded-lg text-xs font-bold uppercase hover:bg-red-500 hover:text-white transition">Reject</button>
+                            <button onClick={() => handleStatusUpdate(booking.id, 'confirmed')} className="flex-1 bg-green-900/20 text-green-400 border border-green-900/30 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-green-600 hover:text-white transition flex items-center justify-center gap-1">
+                              <CheckCircle size={12} /> Accept
+                            </button>
+                            <button onClick={() => setSelectedBooking(booking)} className="flex-1 bg-red-900/20 text-red-400 border border-red-900/30 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-red-600 hover:text-white transition flex items-center justify-center gap-1">
+                              <XCircle size={12} /> Reject
+                            </button>
                           </>
                         )}
                         {booking.status === 'confirmed' && (
-                          <button onClick={() => handleStatusUpdate(booking.id, 'completed')} className="w-full bg-blue-500/10 text-blue-400 border border-blue-500/20 py-2 rounded-lg text-xs font-bold uppercase hover:bg-blue-500 hover:text-white transition">Mark Completed</button>
+                          <button onClick={() => handleStatusUpdate(booking.id, 'completed')} className="w-full bg-blue-900/20 text-blue-400 border border-blue-900/30 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-blue-600 hover:text-white transition flex items-center justify-center gap-1">
+                            <CheckCircle size={12} /> Mark Done
+                          </button>
                         )}
                         {(booking.status === 'rejected' || booking.status === 'completed') && (
-                          <button onClick={() => setBookingToDelete(booking)} className="w-full bg-stone-800 text-stone-400 py-2 rounded-lg text-xs font-bold uppercase hover:bg-red-500 hover:text-white transition">Delete</button>
+                          <button onClick={() => setBookingToDelete(booking)} className="w-full bg-stone-800 text-stone-400 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-red-600 hover:text-white transition flex items-center justify-center gap-1">
+                            <Trash2 size={12} /> Delete
+                          </button>
                         )}
                       </div>
                     </div>

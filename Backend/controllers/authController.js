@@ -36,7 +36,7 @@ const login = async (req, res) => {
 
     // 2. Compare the plain password with the stored hash.
     const isValidPassword = await bcrypt.compare(password, user.password);
-    
+
     if (!isValidPassword) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -180,7 +180,7 @@ const googleLogin = async (req, res) => {
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    
+
     // Check if user exists
     const users = await query('SELECT * FROM users WHERE email = ?', [email]);
     if (users.length === 0) {
@@ -192,12 +192,13 @@ const forgotPassword = async (req, res) => {
     const expireDate = new Date(Date.now() + 3600000); // 1 hour from now
 
     // Save to DB (Uses MySQL Format for Date)
-    await query('UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE email = ?', 
+    await query('UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE email = ?',
       [token, expireDate, email]
     );
 
     // Send Email (Points to Frontend URL)
-    const resetLink = `http://localhost:5173/reset-password/${token}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetLink = `${frontendUrl}/reset-password/${token}`;
     await emailService.sendPasswordResetEmail(email, resetLink);
 
     res.json({ message: "Reset link sent to your email" });
@@ -216,7 +217,7 @@ const resetPassword = async (req, res) => {
 
     // Find user with valid token and not expired
     const users = await query(
-      'SELECT * FROM users WHERE reset_token = ? AND reset_token_expires > NOW()', 
+      'SELECT * FROM users WHERE reset_token = ? AND reset_token_expires > NOW()',
       [token]
     );
 

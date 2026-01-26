@@ -3,9 +3,9 @@ import { generateBookingPDF } from './pdfService.js';
 
 dotenv.config();
 
-// ✅ Use PUBLIC URL (Vercel) for reliable image loading
-// This avoids Gmail clipping (Base64 is too big) and avoids broken images (Render path issues)
-const LOGO_URL = "https://beauty-parlour-app.vercel.app/Gallery/logo.jpg";
+// ✅ Use FRONTEND_URL from environment variables (so it updates when you change your domain)
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://beauty-parlour-app.vercel.app";
+const LOGO_URL = `${FRONTEND_URL}/Gallery/logo.jpg`;
 
 // ✅ NEW: Use Brevo API directly via fetch (bypasses SMTP port blocking)
 const BREVO_API_KEY = process.env.BREVO_API_KEY;

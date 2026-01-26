@@ -506,13 +506,14 @@ const BookingPage = () => {
             </div>
 
             {/* TOTAL PRICE BAR & SUBMIT */}
-            <div className="mt-12 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-
-              <div className="text-center md:text-left">
+            <div className="hidden md:flex mt-12 pt-8 border-t border-white/5 justify-between items-center gap-6">
+              <div className="text-left">
                 <p className="text-stone-500 text-xs font-bold uppercase tracking-widest mb-1">Total Payable</p>
-                <div className="flex items-center gap-2 justify-center md:justify-start">
+                <div className="flex items-center gap-2">
                   <IndianRupee className="w-6 h-6 text-white" />
-                  <span className="text-4xl font-light text-white tracking-tight">{calculateTotal()}</span>
+                  <span className="text-4xl font-light text-white tracking-tight">
+                    {calculateTotal() > 0 ? calculateTotal() : '---'}
+                  </span>
                 </div>
                 {selectedAddOns.length > 0 && (
                   <p className="text-stone-500 text-xs mt-2">Includes {selectedAddOns.length} extra(s)</p>
@@ -522,7 +523,7 @@ const BookingPage = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full md:w-auto px-10 bg-white text-black py-5 rounded-xl hover:bg-stone-200 transition-all duration-300 font-bold text-xs uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                className="px-10 bg-white text-black py-5 rounded-xl hover:bg-stone-200 transition-all duration-300 font-bold text-xs uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
               >
                 {loading ? (
                   <>
@@ -536,6 +537,29 @@ const BookingPage = () => {
                   </>
                 )}
               </button>
+            </div>
+
+            {/* MOBILE STICKY FOOTER (Visible only on small screens) */}
+            <div className="md:hidden fixed bottom-6 left-6 right-6 z-50">
+              <div className="bg-stone-900/95 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl flex items-center justify-between gap-4 ring-1 ring-black/50">
+                <div>
+                  <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mb-1">Total</p>
+                  <div className="flex items-center gap-1">
+                    <IndianRupee className="w-4 h-4 text-white" />
+                    <span className="text-2xl font-bold text-white">
+                      {calculateTotal() > 0 ? calculateTotal() : '0'}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 bg-white text-black py-4 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                >
+                  {loading ? 'Processing...' : 'Confirm'} <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
             </div>
           </form>
         </div>

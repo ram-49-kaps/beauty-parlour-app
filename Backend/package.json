@@ -12,7 +12,6 @@
   "type": "module",
   "license": "ISC",
   "dependencies": {
-    "@sendinblue/client": "^3.3.1",
     "axios": "^1.13.2",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -26,8 +25,7 @@
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
     "mysql2": "^3.15.3",
-    "nodemailer": "^6.10.1",
-    "nodemailer-brevo-transport": "^2.2.1",
+    "nodemailer": "^7.0.12",
     "pdfkit": "^0.17.2",
     "twilio": "^5.12.0"
   },

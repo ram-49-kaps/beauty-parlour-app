@@ -81,10 +81,19 @@ const Homepage = () => {
       {/* --- HERO SECTION --- */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
+          {/* ✅ PERFORMANCE: Responsive Image (Small for Mobile, Large for Desktop) */}
           <img
+            srcSet="
+              https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?q=80&w=600&auto=format&fit=crop 600w,
+              https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?q=80&w=1200&auto=format&fit=crop 1200w,
+              https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?q=80&w=2070&auto=format&fit=crop 2000w
+            "
+            sizes="(max-width: 600px) 600px, (max-width: 1200px) 1200px, 2000px"
             src="https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?q=80&w=2070&auto=format&fit=crop"
             alt="Luxury Salon Interior"
             className="w-full h-full object-cover opacity-60"
+            fetchPriority="high" // ⚡ Critical for LCP
+            loading="eager"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-stone-950"></div>
         </div>
@@ -161,6 +170,7 @@ const Homepage = () => {
                     src={getServiceImage(service)}
                     alt={service.name}
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 opacity-90"
+                    loading="lazy" /* ✅ Lazy load service images */
                     onError={(e) => { e.target.src = 'https://via.placeholder.com/400x600?text=No+Image'; }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-90"></div>

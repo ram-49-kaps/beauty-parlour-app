@@ -257,9 +257,82 @@ const sendPasswordResetEmail = async (email, resetLink) => {
   );
 };
 
+// 4. LOGIN SUCCESS EMAIL
+const sendLoginSuccessEmail = async (email, name) => {
+  const htmlContent = `
+    <div style="${styles.container}">
+      <div style="${styles.header}">
+        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />
+      </div>
+      
+      <div style="${styles.body}">
+        <h2 style="${styles.h2}">Welcome Back! ✨</h2>
+        <p style="${styles.text}">Hello <strong>${name}</strong>,</p>
+        <p style="${styles.text}">You have successfully logged in to your <strong>Flawless Salon</strong> account.</p>
+        
+        <div style="${styles.detailBox} border-left: 4px solid #1c1917;">
+           <p style="margin: 0; color: #374151;">We are excited to have you back. Ready to glow?</p>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${FRONTEND_URL}/booking" style="background-color: #1c1917; color: #ffffff; padding: 14px 28px; text-decoration: none; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; border-radius: 4px; display: inline-block;">Book Appointment</a>
+        </div>
+
+        <p style="${styles.text} font-size: 12px; color: #9ca3af;">If this wasn't you, please reset your password immediately.</p>
+      </div>
+
+      <div style="${styles.footer}">
+        &copy; ${new Date().getFullYear()} Flawless Salon. Security Team.
+      </div>
+    </div>
+  `;
+
+  // We don't await this to keep login fast
+  sendEmailViaBrevo(
+    email,
+    'Login Successful - Flawless Salon',
+    htmlContent
+  ).catch(err => console.error("Login email failed", err));
+};
+
+// 5. WELCOME EMAIL (REGISTRATION)
+const sendWelcomeEmail = async (email, name) => {
+  const htmlContent = `
+    <div style="${styles.container}">
+      <div style="${styles.header}">
+        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />
+      </div>
+      
+      <div style="${styles.body}">
+        <h2 style="${styles.h2}">Welcome to Flawless! 💖</h2>
+        <p style="${styles.text}">Hello <strong>${name}</strong>,</p>
+        <p style="${styles.text}">Thank you for joining <strong>Flawless by Drashti</strong>. Your account has been successfully created.</p>
+        
+        <p style="${styles.text}">Explore our premium services, manage your bookings, and get exclusive offers directly from your dashboard.</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${FRONTEND_URL}" style="background-color: #1c1917; color: #ffffff; padding: 14px 28px; text-decoration: none; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; border-radius: 4px; display: inline-block;">Visit Salon Profile</a>
+        </div>
+      </div>
+
+      <div style="${styles.footer}">
+        &copy; ${new Date().getFullYear()} Flawless Salon. All rights reserved.
+      </div>
+    </div>
+  `;
+
+  await sendEmailViaBrevo(
+    email,
+    'Welcome to Flawless Salon! 🎉',
+    htmlContent
+  );
+};
+
 export default {
   sendBookingConfirmation,
   sendBookingRejection,
   sendBookingNotification,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  sendLoginSuccessEmail,
+  sendWelcomeEmail
 };

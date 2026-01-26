@@ -44,6 +44,9 @@ const login = async (req, res) => {
     // 3. Generate Token and Respond
     const token = createToken(user);
 
+    // 📧 Notification: Login Success
+    emailService.sendLoginSuccessEmail(user.email, user.name);
+
     res.json({
       message: 'Login successful',
       token,
@@ -97,6 +100,9 @@ const register = async (req, res) => {
     // 4. Generate Token and Respond
     const token = createToken(newUser);
 
+    // 📧 Notification: Welcome Email
+    emailService.sendWelcomeEmail(email, name);
+
     res.status(201).json({
       message: 'Registration successful',
       token,
@@ -141,6 +147,8 @@ const googleLogin = async (req, res) => {
     );
 
     let user;
+    let isNewUser = false; // Track if we just registered them
+
     if (users.length === 0) {
       const result = await query(
         'INSERT INTO users (email, name, role, password) VALUES (?, ?, ?, ?)',
@@ -153,6 +161,7 @@ const googleLogin = async (req, res) => {
         name,
         role: 'customer',
       };
+      isNewUser = true;
     } else {
       user = users[0];
     }
@@ -163,6 +172,13 @@ const googleLogin = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE }
     );
+
+    // 📧 Send Email based on context
+    if (isNewUser) {
+      emailService.sendWelcomeEmail(user.email, user.name); // Welcome!
+    } else {
+      emailService.sendLoginSuccessEmail(user.email, user.name); // Welcome Back!
+    }
 
     res.json({
       message: 'Google login successful',

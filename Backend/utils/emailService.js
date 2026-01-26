@@ -1,34 +1,67 @@
-import { createTransport } from 'nodemailer';
-import brevoTransport from 'nodemailer-brevo-transport';
 import dotenv from 'dotenv';
 import { generateBookingPDF } from './pdfService.js';
 
-import path from 'path';
-
 dotenv.config();
 
-// Use CID for reliable image loading in emails
-const LOGO_URL = "cid:logo";
-// Use relative path for Render compatibility (Backend is root)
-import { fileURLToPath } from 'url';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const LOGO_PATH = path.join(__dirname, '../../frontend/public/Gallery/logo.jpg');
+// ✅ NEW: Use Brevo API directly via fetch (bypasses SMTP port blocking)
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const FROM_EMAIL = process.env.EMAIL_USER || 'flawlessbydrashti@gmail.com';
+const FROM_NAME = 'Flawless Salon';
 
-// ✅ NEW: Use Brevo API instead of SMTP (bypasses port blocking)
-const transporter = createTransport(
-  brevoTransport({
-    apiKey: process.env.BREVO_API_KEY || process.env.EMAIL_PASSWORD // Fallback to Gmail password temporarily
-  })
-);
-
-(async () => {
+// Helper function to send email via Brevo API
+const sendEmailViaBrevo = async (to, subject, htmlContent, attachments = []) => {
   try {
-    await transporter.verify();
-    console.log("📧 Email transporter VERIFIED & ready (Brevo API)");
-  } catch (err) {
-    console.error("❌ Email transporter FAILED:", err.message);
+    const payload = {
+      sender: { name: FROM_NAME, email: FROM_EMAIL },
+      to: [{ email: to }],
+      subject: subject,
+      htmlContent: htmlContent
+    };
+
+    // Add BCC if needed
+    if (to !== process.env.EMAIL_USER) {
+      payload.bcc = [{ email: process.env.EMAIL_USER }];
+    }
+
+    // Add attachments if provided
+    if (attachments.length > 0) {
+      payload.attachment = attachments.map(att => ({
+        name: att.filename,
+        content: att.content.toString('base64')
+      }));
+    }
+
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': BREVO_API_KEY,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Brevo API Error: ${error}`);
+    }
+
+    const result = await response.json();
+    console.log(`📨 Email sent via Brevo. MessageId=${result.messageId}`);
+    return result;
+  } catch (error) {
+    console.error('❌ Brevo email failed:', error.message);
+    throw error;
   }
+};
+
+// Verify API key on startup
+(async () => {
+  if (!BREVO_API_KEY) {
+    console.error("❌ BREVO_API_KEY not set in environment variables!");
+    return;
+  }
+  console.log("📧 Email service ready (Brevo API)");
 })();
 
 // --- COMMON STYLES FOR CONSISTENCY ---
@@ -48,87 +81,84 @@ const styles = {
 // 1. CONFIRMATION EMAIL
 const sendBookingConfirmation = async (booking, serviceName) => {
   const targetEmail = booking.customer_email || process.env.EMAIL_USER;
-  const mailOptions = {
-    from: `"Flawless Salon" <${process.env.EMAIL_USER}>`,
-    to: targetEmail,
-    bcc: process.env.EMAIL_USER,
-    subject: 'Appointment Confirmed - Flawless Salon',
-    html: `
-      <div style="${styles.container}">
-        <div style="${styles.header}">
-        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />      
-        </div>
-        
-        <div style="${styles.body}">
-          <h2 style="${styles.h2} color: #059669;">Appointment Confirmed! 🎉</h2>
-          <p style="${styles.text}">Dear <strong>${booking.customer_name}</strong>,</p>
-          <p style="${styles.text}">We are delighted to confirm your appointment. A receipt of your booking is attached to this email.</p>
-          
-          <div style="${styles.detailBox} border-left: 4px solid #059669;">
-          <div style="${styles.detailBox} border-left: 4px solid #059669;">
-            <div style="${styles.detailRow}"><strong>Reference No:</strong> ${booking.id}</div>
-            <div style="${styles.detailRow}"><strong>Service:</strong> ${serviceName}</div>
-            <div style="${styles.detailRow}"><strong>Date:</strong> ${new Date(booking.booking_date).toDateString()}</div>
-            <div style="${styles.detailRow}"><strong>Time:</strong> ${booking.booking_time}</div>
-            <div style="font-size: 16px; color: #059669; padding-top: 5px; font-weight: bold;"><strong>Total Amount:</strong> ₹${booking.total_amount}</div>
-          </div>
-          
-          <p style="${styles.text}">Please arrive 5 minutes early. We can't wait to see you!</p>
-          <p style="${styles.text}">Warm regards,<br><strong>Team Flawless</strong></p>
-        </div>
-        
-        <div style="${styles.footer}">
-          &copy; ${new Date().getFullYear()} Flawless Salon. All rights reserved.
-        </div>
+
+  const htmlContent = `
+    <div style="${styles.container}">
+      <div style="${styles.header}">
+        <h1 style="${styles.brand}">FLAWLESS</h1>
       </div>
-    `,
-    attachments: [
-      { filename: 'logo.jpg', path: LOGO_PATH, cid: 'logo' },
-      { filename: `Booking_Receipt_${booking.id}.pdf`, content: await generateBookingPDF(booking, serviceName) }
-    ]
-  };
-  const info = await transporter.sendMail(mailOptions);
-  console.log(`📨 Booking confirmation email queued. MessageId=${info.messageId} To=${targetEmail}`);
+      
+      <div style="${styles.body}">
+        <h2 style="${styles.h2} color: #059669;">Appointment Confirmed! 🎉</h2>
+        <p style="${styles.text}">Dear <strong>${booking.customer_name}</strong>,</p>
+        <p style="${styles.text}">We are delighted to confirm your appointment. A receipt of your booking is attached to this email.</p>
+        
+        <div style="${styles.detailBox} border-left: 4px solid #059669;">
+          <div style="${styles.detailRow}"><strong>Reference No:</strong> ${booking.id}</div>
+          <div style="${styles.detailRow}"><strong>Service:</strong> ${serviceName}</div>
+          <div style="${styles.detailRow}"><strong>Date:</strong> ${new Date(booking.booking_date).toDateString()}</div>
+          <div style="${styles.detailRow}"><strong>Time:</strong> ${booking.booking_time}</div>
+          <div style="font-size: 16px; color: #059669; padding-top: 5px; font-weight: bold;"><strong>Total Amount:</strong> ₹${booking.total_amount}</div>
+        </div>
+        
+        <p style="${styles.text}">Please arrive 5 minutes early. We can't wait to see you!</p>
+        <p style="${styles.text}">Warm regards,<br><strong>Team Flawless</strong></p>
+      </div>
+      
+      <div style="${styles.footer}">
+        &copy; ${new Date().getFullYear()} Flawless Salon. All rights reserved.
+      </div>
+    </div>
+  `;
+
+  const pdfBuffer = await generateBookingPDF(booking, serviceName);
+
+  await sendEmailViaBrevo(
+    targetEmail,
+    'Appointment Confirmed - Flawless Salon',
+    htmlContent,
+    [{ filename: `Booking_Receipt_${booking.id}.pdf`, content: pdfBuffer }]
+  );
+
+  console.log(`📨 Booking confirmation sent to ${targetEmail}`);
 };
 
 // 2. REJECTION EMAIL
 const sendBookingRejection = async (booking, serviceName, reason = '') => {
-  const mailOptions = {
-    from: `"Flawless Salon" <${process.env.EMAIL_USER}>`,
-    to: booking.customer_email,
-    subject: 'IMPORTANT: Update Regarding Your Appointment',
-    html: `
-      <div style="${styles.container}">
-        <div style="${styles.header}">
-        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />      
+  const htmlContent = `
+    <div style="${styles.container}">
+      <div style="${styles.header}">
+        <h1 style="${styles.brand}">FLAWLESS</h1>
+      </div>
+      
+      <div style="${styles.body}">
+        <h2 style="${styles.h2} color: #dc2626;">Booking Request Declined</h2>
+        <p style="${styles.text}">Dear <strong>${booking.customer_name}</strong>,</p>
+        <p style="${styles.text}">We sincerely apologize, but we are unable to fulfill your appointment request for <strong>${serviceName}</strong> at this time.</p>
+        
+        <div style="${styles.detailBox} border-left: 4px solid #dc2626; background-color: #fef2f2;">
+           <p style="margin: 0; color: #991b1b; font-weight: bold;">Reason:</p>
+           <p style="margin: 5px 0 0 0; color: #7f1d1d;">${reason || 'The selected time slot is no longer available due to high demand.'}</p>
         </div>
         
-        <div style="${styles.body}">
-          <h2 style="${styles.h2} color: #dc2626;">Booking Request Declined</h2>
-          <p style="${styles.text}">Dear <strong>${booking.customer_name}</strong>,</p>
-          <p style="${styles.text}">We sincerely apologize, but we are unable to fulfill your appointment request for <strong>${serviceName}</strong> at this time.</p>
-          
-          <div style="${styles.detailBox} border-left: 4px solid #dc2626; background-color: #fef2f2;">
-             <p style="margin: 0; color: #991b1b; font-weight: bold;">Reason:</p>
-             <p style="margin: 5px 0 0 0; color: #7f1d1d;">${reason || 'The selected time slot is no longer available due to high demand.'}</p>
-          </div>
-          
-          <p style="${styles.text}">We would love to see you at another time. Please visit our website to check other available slots.</p>
-          <p style="${styles.text}">Regards,<br><strong>Team Flawless</strong></p>
-        </div>
-
-        <div style="${styles.footer}">
-          &copy; ${new Date().getFullYear()} Flawless Salon. All rights reserved.
-        </div>
+        <p style="${styles.text}">We would love to see you at another time. Please visit our website to check other available slots.</p>
+        <p style="${styles.text}">Regards,<br><strong>Team Flawless</strong></p>
       </div>
-    `,
-    attachments: [
-      { filename: 'logo.jpg', path: LOGO_PATH, cid: 'logo' },
-      { filename: `Booking_Status_${booking.id}.pdf`, content: await generateBookingPDF(booking, serviceName) }
-    ]
-  };
+
+      <div style="${styles.footer}">
+        &copy; ${new Date().getFullYear()} Flawless Salon. All rights reserved.
+      </div>
+    </div>
+  `;
+
   try {
-    await transporter.sendMail(mailOptions);
+    const pdfBuffer = await generateBookingPDF(booking, serviceName);
+    await sendEmailViaBrevo(
+      booking.customer_email,
+      'IMPORTANT: Update Regarding Your Appointment',
+      htmlContent,
+      [{ filename: `Booking_Status_${booking.id}.pdf`, content: pdfBuffer }]
+    );
     console.log(`📨 Rejection Email Sent to ${booking.customer_email}`);
   } catch (err) {
     console.error("❌ Failed to send rejection email:", err);
@@ -137,75 +167,71 @@ const sendBookingRejection = async (booking, serviceName, reason = '') => {
 
 // 3. NOTIFICATION (PENDING) EMAIL
 const sendBookingNotification = async (booking, serviceName) => {
-  const mailOptions = {
-    from: `"Flawless by Drashti" <${process.env.EMAIL_USER}>`,
-    to: booking.customer_email,
-    bcc: process.env.EMAIL_USER, // Admin receives a copy of new requests
-    subject: 'Appointment Request Received',
-    html: `
-      <div style="${styles.container}">
-        <div style="${styles.header}">
-        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />      
+  const htmlContent = `
+    <div style="${styles.container}">
+      <div style="${styles.header}">
+        <h1 style="${styles.brand}">FLAWLESS</h1>
+      </div>
+      
+      <div style="${styles.body}">
+        <h2 style="${styles.h2} color: #d97706;">Request Received ⏳</h2>
+        <p style="${styles.text}">Dear <strong>${booking.customer_name}</strong>,</p>
+        <p style="${styles.text}">We have received your booking request! It is currently <strong>Pending Approval</strong>.</p>
+        
+        <div style="${styles.detailBox} border-left: 4px solid #d97706;">
+          <div style="${styles.detailRow}"><strong>Reference No:</strong> ${booking.id}</div>
+          <div style="${styles.detailRow}"><strong>Service:</strong> ${serviceName}</div>
+          <div style="${styles.detailRow}"><strong>Requested Date:</strong> ${new Date(booking.booking_date).toDateString()}</div>
+          <div style="${styles.detailRow}"><strong>Requested Time:</strong> ${booking.booking_time}</div>
+          <div style="${styles.detailRow}"><strong>Est. Amount:</strong> ₹${booking.total_amount}</div>
         </div>
         
-        <div style="${styles.body}">
-          <h2 style="${styles.h2} color: #d97706;">Request Received ⏳</h2>
-          <p style="${styles.text}">Dear <strong>${booking.customer_name}</strong>,</p>
-          <p style="${styles.text}">We have received your booking request! It is currently <strong>Pending Approval</strong>.</p>
-          
-          <div style="${styles.detailBox} border-left: 4px solid #d97706;">
-          <div style="${styles.detailBox} border-left: 4px solid #d97706;">
-            <div style="${styles.detailRow}"><strong>Reference No:</strong> ${booking.id}</div>
-            <div style="${styles.detailRow}"><strong>Service:</strong> ${serviceName}</div>
-            <div style="${styles.detailRow}"><strong>Requested Date:</strong> ${new Date(booking.booking_date).toDateString()}</div>
-            <div style="${styles.detailRow}"><strong>Requested Time:</strong> ${booking.booking_time}</div>
-            <div style="${styles.detailRow}"><strong>Est. Amount:</strong> ₹${booking.total_amount}</div>
-          </div>
-          
-          <p style="${styles.text}">You will receive a final confirmation email shortly containing your booking receipt.</p>
-          <p style="${styles.text}">Best,<br><strong>Team Flawless</strong></p>
-        </div>
-
-        <div style="${styles.footer}">
-          &copy; ${new Date().getFullYear()} Flawless Salon. All rights reserved.
-        </div>
+        <p style="${styles.text}">You will receive a final confirmation email shortly containing your booking receipt.</p>
+        <p style="${styles.text}">Best,<br><strong>Team Flawless</strong></p>
       </div>
-    `,
-    attachments: [{ filename: 'logo.jpg', path: LOGO_PATH, cid: 'logo' }]
-  };
-  await transporter.sendMail(mailOptions);
+
+      <div style="${styles.footer}">
+        &copy; ${new Date().getFullYear()} Flawless Salon. All rights reserved.
+      </div>
+    </div>
+  `;
+
+  await sendEmailViaBrevo(
+    booking.customer_email,
+    'Appointment Request Received',
+    htmlContent
+  );
 };
 
 const sendPasswordResetEmail = async (email, resetLink) => {
-  const mailOptions = {
-    from: `"Flawless Security" <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: 'Reset Your Password - Flawless Salon',
-    html: `
-      <div style="${styles.container}">
-        <div style="${styles.header}">
-        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />      
+  const htmlContent = `
+    <div style="${styles.container}">
+      <div style="${styles.header}">
+        <h1 style="${styles.brand}">FLAWLESS</h1>
+      </div>
+      
+      <div style="${styles.body}">
+        <h2 style="${styles.h2}">Password Reset Request</h2>
+        <p style="${styles.text}">We received a request to reset your password. If this was you, click the button below to set a new password.</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetLink}" style="background-color: #1c1917; color: #ffffff; padding: 14px 28px; text-decoration: none; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; border-radius: 4px; display: inline-block;">Reset Password</a>
         </div>
         
-        <div style="${styles.body}">
-          <h2 style="${styles.h2}">Password Reset Request</h2>
-          <p style="${styles.text}">We received a request to reset your password. If this was you, click the button below to set a new password.</p>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetLink}" style="background-color: #1c1917; color: #ffffff; padding: 14px 28px; text-decoration: none; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; border-radius: 4px; display: inline-block;">Reset Password</a>
-          </div>
-          
-          <p style="${styles.text} font-size: 12px; color: #9ca3af;">This link expires in 1 hour. If you didn't ask for this, you can ignore this email.</p>
-        </div>
-
-        <div style="${styles.footer}">
-          &copy; ${new Date().getFullYear()} Flawless Salon. Security Team.
-        </div>
+        <p style="${styles.text} font-size: 12px; color: #9ca3af;">This link expires in 1 hour. If you didn't ask for this, you can ignore this email.</p>
       </div>
-    `,
-    attachments: [{ filename: 'logo.jpg', path: LOGO_PATH, cid: 'logo' }]
-  };
-  await transporter.sendMail(mailOptions);
+
+      <div style="${styles.footer}">
+        &copy; ${new Date().getFullYear()} Flawless Salon. Security Team.
+      </div>
+    </div>
+  `;
+
+  await sendEmailViaBrevo(
+    email,
+    'Reset Your Password - Flawless Salon',
+    htmlContent
+  );
 };
 
 export default {

@@ -1,4 +1,5 @@
 import { createTransport } from 'nodemailer';
+import brevoTransport from 'nodemailer-brevo-transport';
 import dotenv from 'dotenv';
 import { generateBookingPDF } from './pdfService.js';
 
@@ -14,31 +15,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const LOGO_PATH = path.join(__dirname, '../../frontend/public/Gallery/logo.jpg');
 
-const transporter = createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  },
-  tls: {
-    rejectUnauthorized: false
-  },
-  logger: true,
-  debug: true,
-  connectionTimeout: 10000,
-  greetingTimeout: 5000,
-  socketTimeout: 10000,
-  family: 4 // ⚠️ CRITICAL: Force IPv4 for Render/Docker environments
-});
+// ✅ NEW: Use Brevo API instead of SMTP (bypasses port blocking)
+const transporter = createTransport(
+  brevoTransport({
+    apiKey: process.env.BREVO_API_KEY || process.env.EMAIL_PASSWORD // Fallback to Gmail password temporarily
+  })
+);
 
 (async () => {
   try {
     await transporter.verify();
-    console.log("📧 Email transporter VERIFIED & ready");
+    console.log("📧 Email transporter VERIFIED & ready (Brevo API)");
   } catch (err) {
-    console.error("❌ Email transporter FAILED:", err);
+    console.error("❌ Email transporter FAILED:", err.message);
   }
 })();
 

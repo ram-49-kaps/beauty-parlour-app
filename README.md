@@ -1,31 +1,31 @@
-# ✨ Flawless By Drashti - Premium Beauty Studio Platform
+#  Flawless By Drashti - Premium Beauty Studio Platform
 
 ![Flawless Logo](frontend/public/Gallery/logo.jpg)
 
 **Flawless By Drashti** is a state-of-the-art beauty salon management platform that blends premium aesthetics with advanced AI technology. It provides a seamless booking experience for customers and a powerful management dashboard for the business owner.
 
-## 🚀 Live Demo
+##  Live Demo
 - **Frontend Website:** [View Live Site](https://flawlessbydrashti.vercel.app/)
 - **AI Chatbot API:** [Render Service](https://beauty-parlour-chatbot.onrender.com)
 
 ---
 
-## 💎 Key Features
+##  Key Features
 
-### 🌸 For Customers
+###  For Customers
 - **"Lily" AI Concierge:** A smart AI assistant (Python/LangChain) that can answer queries, check price lists, and **book appointments** in real-time.
 - **Premium UI/UX:** A sleek, fully responsive dark-mode design with glassmorphism effects and smooth animations.
 - **Real-Time Booking:** Integrated calendar system that syncs across the website and chatbot.
 - **Secure Authentication:** User signup/login with JWT protection.
 
-### 🛡️ For Administrators
+### For Administrators
 - **Secure Admin Portal:** Hidden access route (`/secure-owner-portal-2026`) for owner privacy.
 - **Booking Management:** View, approve, or cancel appointments.
 - **Service Management:** Add, edit, or remove beauty services dynamically.
 
 ---
 
-## 🛠️ Technology Stack
+##  Technology Stack
 
 ### **Frontend**
 - **React.js** (Vite)
@@ -46,7 +46,7 @@
 
 ---
 
-## ⚙️ Installation & Setup
+##  Installation & Setup
 
 1. **Clone the Repository**
    ```bash
@@ -79,11 +79,11 @@
 
 ---
 
-## 🔒 Privacy & Security
+##  Privacy & Security
 - **Cookie Consent:** GDPR-compliant cookie banner.
 - **Password Hashing:** Bcrypt for user passwords.
 - **Role-Based Access:** Strict Admin vs Customer separation.
 
 ---
 
-Created with ❤️ by **Ram Kapadia**
+Created with  by **Ram Kapadia**

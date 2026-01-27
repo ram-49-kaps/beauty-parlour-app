@@ -32,9 +32,9 @@ CORS(app)
 
 # Groq LLM Setup
 llm = ChatGroq(
-    temperature=0.1,
+    temperature=1,
     groq_api_key=os.getenv("GROQ_API_KEY"),
-    model_name="llama-3.3-70b-versatile"
+    model_name="meta-llama/llama-4-maverick-17b-128e-instruct"
 )
 
 
@@ -300,13 +300,16 @@ def chat_endpoint():
         print(f"🤖 Output: {output_text}")
         
         return jsonify({"reply": output_text})
+        
+
+        
+        return jsonify({"reply": output_text})
 
     except Exception as e:
         print(f"❌ SYSTEM ERROR: {e}")
-        # Return a JSON error instead of crashing
-        return jsonify({"reply": "I'm having a brief brain freeze. Please try asking again."}), 500
+        chat_history = []
+        return jsonify({"reply": "I'm having a brief brain freeze. Please try asking again."})
 
 if __name__ == "__main__":
     print("🚀 API Server running on http://localhost:8000")
-    # host='0.0.0.0' is REQUIRED for deployment on Render
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    app.run(port=8000, debug=True)

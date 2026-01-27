@@ -312,11 +312,16 @@ const ChatWidget = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="group relative flex items-center justify-center gap-3 bg-white text-black pl-5 pr-6 h-14 rounded-full shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-105 transition-transform duration-300 overflow-hidden"
+          className="group relative flex items-center justify-center gap-3 bg-white text-black pl-5 pr-6 h-14 rounded-full shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-105 transition-transform duration-300 overflow-visible"
         >
-          <div className="absolute inset-0 bg-white/20 animate-pulse opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          <MessageCircle className="w-5 h-5" />
-          <span className="font-bold text-sm tracking-widest uppercase">Ask Lily</span>
+          {/* Animated Ring */}
+          <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-blue-400 via-white to-blue-400 opacity-70 blur-sm group-hover:opacity-100 animate-pulse transition-opacity duration-1000"></div>
+
+          {/* Main Button Content */}
+          <div className="relative flex items-center gap-3 bg-white h-full w-full rounded-full px-5 border border-blue-100">
+            <MessageCircle className="w-5 h-5 text-blue-900" />
+            <span className="font-bold text-sm tracking-widest uppercase text-blue-900">Ask Lily</span>
+          </div>
         </button>
       )}
 

@@ -298,12 +298,16 @@ agent = create_structured_chat_agent(
 )
 
 # ✅ Create Agent Executor
+# We use a custom error handler to prevent crashing on "Could not parse LLM output"
+def _handle_error(error) -> str:
+    return str(error).replace("Could not parse LLM output: `", "").replace("`", "")
+
 agent_executor = AgentExecutor(
     agent=agent,
     tools=tools,
     memory=memory,
     verbose=True,
-    handle_parsing_errors=True,
+    handle_parsing_errors=_handle_error,
     max_iterations=5
 )
 

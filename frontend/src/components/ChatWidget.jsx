@@ -8,7 +8,7 @@ import { MessageCircle, X, Send, Loader2, LogIn, RotateCcw } from 'lucide-react'
 const ChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { text: "Hello. I am your AI Concierge. How may I assist you with services, pricing, or bookings today?", isBot: true }
+    { text: "Hello. I am Lily, your AI Concierge. How may I assist you with services, pricing, or bookings today?", isBot: true }
   ]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +49,7 @@ const ChatWidget = () => {
 
       // 2. Reset Frontend UI
       setMessages([
-        { text: "Hello. I am your AI Concierge. How may I assist you with services, pricing, or bookings today?", isBot: true }
+        { text: "Hello. I am Lily, your AI Concierge. How may I assist you with services, pricing, or bookings today?", isBot: true }
       ]);
 
     } catch (error) {
@@ -218,11 +218,11 @@ const ChatWidget = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-[9999] font-sans">
+    <div className="fixed bottom-4 right-4 z-[9999] font-sans flex flex-col items-end">
 
       {/* 🟢 CHAT WINDOW */}
       {isOpen && (
-        <div className="mb-4 w-[350px] md:w-[400px] h-[500px] bg-stone-900 border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-[slideUp_0.3s_ease-out]">
+        <div className="mb-2 w-[90vw] max-w-[400px] h-[70vh] max-h-[600px] bg-stone-900 border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-[slideUp_0.3s_ease-out]">
 
           {/* Header */}
           <div className="bg-stone-950 p-4 border-b border-white/5 flex justify-between items-center">
@@ -231,8 +231,8 @@ const ChatWidget = () => {
                 <img src="/Gallery/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
               </div>
               <div>
-                <h3 className="text-white text-sm font-bold tracking-widest uppercase">Concierge</h3>
-                <p className="text-stone-500 text-[10px] uppercase tracking-widest">Flawless by Drashti</p>
+                <h3 className="text-white text-sm font-bold tracking-widest uppercase">Lily</h3>
+                <p className="text-stone-500 text-[10px] uppercase tracking-widest">Your Beauty Assistant</p>
               </div>
             </div>
             {/* Header Actions */}
@@ -259,7 +259,7 @@ const ChatWidget = () => {
               <div key={idx} className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'}`}>
                 <div className={`max-w-[90%] ${msg.isBot ? 'bg-transparent pl-0' : 'bg-stone-800 px-4 py-3 rounded-2xl rounded-tr-sm text-white'}`}>
 
-                  {msg.isBot && <div className="text-[10px] text-stone-500 uppercase tracking-widest mb-1">Drashti AI</div>}
+                  {msg.isBot && <div className="text-[10px] text-stone-500 uppercase tracking-widest mb-1">Lily</div>}
 
                   <div className={`text-sm leading-relaxed ${msg.isBot ? 'text-stone-300' : 'text-white'}`}>
                     {renderMessageContent(msg.text)}
@@ -312,10 +312,11 @@ const ChatWidget = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="group relative flex items-center justify-center w-14 h-14 bg-white text-black rounded-full shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-110 transition-transform duration-300"
+          className="group relative flex items-center justify-center gap-3 bg-white text-black pl-5 pr-6 h-14 rounded-full shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-105 transition-transform duration-300 overflow-hidden"
         >
-          <div className="absolute inset-0 bg-white rounded-full animate-ping opacity-20 group-hover:opacity-0"></div>
-          <MessageCircle className="w-6 h-6" />
+          <div className="absolute inset-0 bg-white/20 animate-pulse opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <MessageCircle className="w-5 h-5" />
+          <span className="font-bold text-sm tracking-widest uppercase">Ask Lily</span>
         </button>
       )}
 

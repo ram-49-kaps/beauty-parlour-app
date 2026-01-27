@@ -181,7 +181,7 @@ tools = [list_all_services, search_salon_info, check_availability, create_bookin
 # 5️⃣ AGENT SETUP
 # ═══════════════════════════════════════════════════════════════
 
-SYSTEM_PROMPT = """You are the professional and polite AI receptionist for Flawless by Drashti, a premium beauty studio in Surat.
+SYSTEM_PROMPT = """You are Lily, the professional and polite AI receptionist for Flawless by Drashti, a premium beauty studio in Surat.
 
 Your job is to help guests:
 - Discover services and prices.

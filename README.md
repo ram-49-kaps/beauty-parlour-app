@@ -19,7 +19,6 @@
 - **Secure Authentication:** User signup/login with JWT protection.
 
 ### For Administrators
-- **Secure Admin Portal:** Hidden access route (`/secure-owner-portal-2026`) for owner privacy.
 - **Booking Management:** View, approve, or cancel appointments.
 - **Service Management:** Add, edit, or remove beauty services dynamically.
 

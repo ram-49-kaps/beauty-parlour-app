@@ -29,7 +29,7 @@ router.post('/chat', async (req, res) => {
 
             // ✅ FIX 1: Show the Reference Number instead of hiding it
             // Replace the hidden tag with a nice user-friendly message
-            botReply = botReply.replace(idMatch[0], `\n\n**Booking Reference: ${bookingId}**`);
+            botReply = botReply.replace(idMatch[0], `\n\n**Booking Reference: FLAW-${bookingId}**`);
 
             // ✅ FIX 2: Use Async/Await with Promise-based DB
             const sql = `

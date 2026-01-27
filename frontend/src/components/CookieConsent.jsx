@@ -36,7 +36,7 @@ const CookieConsent = () => {
                 {/* Text Content */}
                 <div className="flex-1 space-y-2">
                     <h3 className="text-white font-bold text-lg tracking-wide flex items-center gap-2">
-                        🍪 We Value Your Privacy
+                        We Value Your Privacy
                     </h3>
                     <p className="text-stone-400 text-sm leading-relaxed max-w-2xl">
                         We use cookies to enhance your experience, analyze site usage, and assist in our marketing efforts.

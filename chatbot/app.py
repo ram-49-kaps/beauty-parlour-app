@@ -355,6 +355,10 @@ def chat_endpoint():
         chat_history = []
         return jsonify({"reply": "I'm having a brief brain freeze. Please try asking again."})
 
+@app.route('/', methods=['GET'])
+def home():
+    return "Lily is Awake! 🌸"
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     print(f"🚀 API Server running on http://localhost:{port}")

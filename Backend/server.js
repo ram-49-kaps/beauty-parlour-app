@@ -153,6 +153,10 @@ app.use((err, req, res, next) => {
   next();
 });
 
+app.get('/', (req, res) => {
+  res.send("Backend is Running! 🚀");
+});
+
 // 🚀 START SERVER
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {

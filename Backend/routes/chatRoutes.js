@@ -29,7 +29,7 @@ router.post('/chat', async (req, res) => {
 
             // ✅ FIX 1: Show the Reference Number instead of hiding it
             // Replace the hidden tag with a nice user-friendly message
-            botReply = botReply.replace(idMatch[0], `\n\n**Booking Reference: FLAW-${bookingId}**`);
+            botReply = botReply.replace(idMatch[0], `\n\nBooking Reference: FLAW-${bookingId}**`);
 
             // ✅ FIX 2: Use Async/Await with Promise-based DB
             const sql = `
@@ -84,8 +84,14 @@ router.post('/chat', async (req, res) => {
     } catch (error) {
         console.error("❌ Chat Bridge Error:", error.message);
 
-        if (error.code === 'ECONNREFUSED') {
-            res.status(503).json({ reply: "The AI system is starting up. Please try again in 10 seconds." });
+        // Check for "Service Sleeping" errors (502/503/504) or Connection Refused
+        if (
+            (error.response && [502, 503, 504].includes(error.response.status)) ||
+            error.code === 'ECONNREFUSED'
+        ) {
+            res.status(503).json({
+                reply: "I am currently waking up from sleep mode (Free Tier). Please wait 30 seconds and try again! 💤➡️⚡"
+            });
         } else {
             res.status(500).json({ reply: "I'm having trouble connecting to the system right now." });
         }

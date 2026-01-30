@@ -60,12 +60,12 @@ const LaunchCountdown = () => {
     if (isLive) return null;
 
     return (
-        <div className="fixed inset-0 z-[99999] bg-stone-950 flex flex-col items-center justify-center p-6 text-center">
+        <div className="fixed inset-0 z-[99999] bg-stone-950 flex flex-col items-center justify-center min-h-screen p-6 text-center overflow-hidden">
 
             {/* Background Ambience */}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-stone-800/20 via-stone-950 to-stone-950"></div>
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-stone-800/20 via-stone-950 to-stone-950 pointer-events-none"></div>
 
-            <div className="relative z-10 max-w-4xl w-full animate-fadeInUp">
+            <div className="relative z-10 max-w-4xl w-full animate-fadeInUp flex flex-col items-center justify-center mt-[-50px]">
 
                 {/* LOGO AREA */}
                 <div className="mb-12 flex justify-center">

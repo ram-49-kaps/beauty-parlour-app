@@ -65,34 +65,35 @@ const LaunchCountdown = () => {
             {/* Background Ambience */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-stone-800/20 via-stone-950 to-stone-950 pointer-events-none"></div>
 
-            <div className="relative z-10 max-w-4xl w-full animate-fadeInUp flex flex-col items-center justify-center mt-[-50px]">
+            {/* Main Content Centered */}
+            <div className="flex-grow flex flex-col items-center justify-center w-full max-w-4xl animate-fadeInUp relative z-10 px-4">
 
-                {/* LOGO AREA */}
-                <div className="mb-12 flex justify-center">
-                    <div className="w-24 h-24 rounded-full bg-stone-900 border border-white/10 flex items-center justify-center shadow-2xl relative overflow-hidden group">
+                {/* LOGO AREA - Hide on very small screens to save space */}
+                <div className="mb-8 md:mb-12 flex justify-center">
+                    <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-stone-900 border border-white/10 flex items-center justify-center shadow-2xl relative overflow-hidden group">
                         <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <span className="text-4xl font-light text-white font-serif italic">F</span>
+                        <span className="text-2xl md:text-4xl font-light text-white font-serif italic">F</span>
                     </div>
                 </div>
 
                 {/* HEADLINE */}
-                <div className="mb-16 space-y-6">
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 mb-4">
+                <div className="mb-10 md:mb-16 space-y-4 md:space-y-6">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 mb-2 md:mb-4">
                         <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse" />
                         <span className="text-[10px] uppercase tracking-[0.3em] text-stone-300 font-bold">Coming Soon</span>
                     </div>
-                    <h1 className="text-5xl md:text-7xl lg:text-8xl font-light tracking-tighter text-white leading-tight">
+                    <h1 className="text-4xl md:text-7xl lg:text-8xl font-light tracking-tighter text-white leading-tight">
                         Something <span className="font-serif italic text-stone-400">Exquisite</span> <br />
                         Is Arriving.
                     </h1>
-                    <p className="text-lg text-stone-500 max-w-2xl mx-auto font-light leading-relaxed">
+                    <p className="text-sm md:text-lg text-stone-500 max-w-xl mx-auto font-light leading-relaxed px-4">
                         We are curating a digital sanctuary for your beauty needs. <br className="hidden md:block" />
                         Be the first to experience Flawless By Drashti.
                     </p>
                 </div>
 
-                {/* COUNTDOWN TIMER */}
-                <div className="grid grid-cols-4 gap-4 md:gap-12 max-w-3xl mx-auto mb-20">
+                {/* COUNTDOWN TIMER - Responsive Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-12 w-full max-w-3xl mx-auto mb-10 md:mb-20">
                     <TimeBox value={timeLeft.days} label="Days" />
                     <TimeBox value={timeLeft.hours} label="Hours" />
                     <TimeBox value={timeLeft.minutes} label="Minutes" />
@@ -100,7 +101,7 @@ const LaunchCountdown = () => {
                 </div>
 
                 {/* NOTIFY FORM */}
-                <div className="max-w-md mx-auto relative">
+                <div className="w-full max-w-md mx-auto relative px-4">
                     {status === 'success' ? (
                         <div className="bg-emerald-900/20 border border-emerald-500/30 p-4 rounded-xl flex items-center justify-center gap-3 text-emerald-400 animate-fadeIn">
                             <CheckCircle className="w-5 h-5" />
@@ -109,37 +110,39 @@ const LaunchCountdown = () => {
                     ) : (
                         <form onSubmit={handleNotifyMe} className="relative group">
                             <div className="absolute -inset-1 bg-gradient-to-r from-white/20 to-stone-500/20 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-                            <div className="relative flex shadow-2xl">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <Mail className="h-5 w-5 text-stone-500" />
+                            <div className="relative flex flex-col md:flex-row shadow-2xl gap-2 md:gap-0">
+                                <div className="relative flex-grow">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <Mail className="h-5 w-5 text-stone-500" />
+                                    </div>
+                                    <input
+                                        type="email"
+                                        required
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="block w-full pl-12 pr-4 py-4 bg-stone-900 border border-white/10 rounded-xl md:rounded-r-none text-white placeholder-stone-600 focus:outline-none focus:ring-1 focus:ring-white/30 focus:border-white/30 transition-all text-sm tracking-wide"
+                                        placeholder="Enter your email address..."
+                                    />
                                 </div>
-                                <input
-                                    type="email"
-                                    required
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="block w-full pl-12 pr-32 py-5 bg-stone-900 border border-white/10 rounded-xl text-white placeholder-stone-600 focus:outline-none focus:ring-1 focus:ring-white/30 focus:border-white/30 transition-all text-sm tracking-wide"
-                                    placeholder="Enter your email address..."
-                                />
                                 <button
                                     type="submit"
                                     disabled={status === 'loading'}
-                                    className="absolute right-2 top-2 bottom-2 bg-white text-black hover:bg-stone-200 px-6 rounded-lg text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+                                    className="bg-white text-black hover:bg-stone-200 px-8 py-4 md:py-0 rounded-xl md:rounded-l-none text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap"
                                 >
                                     {status === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Notify Me'}
                                 </button>
                             </div>
                         </form>
                     )}
-                    <p className="mt-4 text-[10px] text-stone-600 uppercase tracking-widest">
+                    <p className="mt-6 text-[10px] text-stone-600 uppercase tracking-widest">
                         Wednesday, Feb 4th • 11:00 AM
                     </p>
                 </div>
 
             </div>
 
-            {/* Footer */}
-            <div className="absolute bottom-6 left-0 right-0 text-center">
+            {/* Footer - Stays at bottom naturally */}
+            <div className="py-6 text-center z-10">
                 <p className="text-[10px] text-stone-700 uppercase tracking-[0.2em]">Flawless by Drashti • Est. 2026</p>
             </div>
 

@@ -14,14 +14,25 @@ export const uploadProfileImage = async (req, res) => {
     // Update Database
     await query('UPDATE users SET profile_image = ? WHERE id = ?', [imageUrl, userId]);
 
-    res.json({ 
-      message: 'Profile image updated', 
-      profile_image: imageUrl 
+    res.json({
+      message: 'Profile image updated',
+      profile_image: imageUrl
     });
 
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ message: 'Server error during upload' });
+  }
+};
+
+// --------------------- GET SUBSCRIBERS ---------------------
+export const getSubscribers = async (req, res) => {
+  try {
+    const subscribers = await query('SELECT id, email, created_at FROM users ORDER BY created_at DESC');
+    res.json(subscribers);
+  } catch (error) {
+    console.error("Error fetching subscribers:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 

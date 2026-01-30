@@ -32,6 +32,7 @@ const Dashboard = () => {
   const [weather, setWeather] = useState({ temp: '--', wind: '--', code: 0, condition: 'Loading...' });
 
   const [bookings, setBookings] = useState([]);
+  const [subscribers, setSubscribers] = useState([]); // ✅ Added Subscribers State
   const [services, setServices] = useState([]);
   const [gallery, setGallery] = useState([]); // ✅ Added Gallery State
   const [chartData, setChartData] = useState([]);
@@ -104,7 +105,15 @@ const Dashboard = () => {
       setStats(statsRes.data);
       setBookings(bookingsRes.data);
       setServices(servicesRes.data);
-      setGallery(galleryRes.data); // ✅ Set Gallery Data
+      setGallery(galleryRes.data);
+
+      // ✅ Fetch Subscribers
+      try {
+        const subscribersRes = await axios.get(`${API_BASE_URL}/users/subscribers`, getAuthHeader());
+        setSubscribers(subscribersRes.data);
+      } catch (err) {
+        console.warn("Failed to fetch subscribers", err);
+      }
 
       // 📊 CALCULATE REAL CHART DATA
       processChartData(bookingsRes.data);
@@ -535,6 +544,14 @@ const Dashboard = () => {
           >
             Gallery
           </button>
+
+          {/* Subscribers Tab */}
+          <button
+            onClick={() => setActiveTab('subscribers')}
+            className={`px-4 py-2 text-sm font-bold uppercase tracking-widest transition-colors ${activeTab === 'subscribers' ? 'text-white border-b-2 border-white' : 'text-stone-500 hover:text-stone-300'}`}
+          >
+            Subscribers <span className="ml-1 bg-stone-800 text-stone-400 px-1.5 py-0.5 rounded-full text-[10px]">{subscribers.length}</span>
+          </button>
         </div>
 
         {/* BOOKINGS TAB */}
@@ -770,6 +787,53 @@ const Dashboard = () => {
             {gallery.length === 0 && (
               <div className="text-center py-20 text-stone-500">
                 <p>Gallery is empty. Add a new item above.</p>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* SUBSCRIBERS TAB */}
+        {activeTab === 'subscribers' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <h3 className="text-xl font-light text-white mb-6">Launch Notification List</h3>
+
+            {subscribers.length === 0 ? (
+              <div className="bg-stone-900/30 border border-white/5 rounded-2xl p-12 text-center text-stone-500">
+                <p>No subscribers yet. Share your launch page!</p>
+              </div>
+            ) : (
+              <div className="bg-stone-900/30 border border-white/5 rounded-2xl overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-black/50 text-stone-500 text-xs uppercase tracking-widest">
+                      <th className="p-4">Email</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4">Joined Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 text-sm text-stone-300">
+                    {subscribers.map((sub) => (
+                      <tr key={sub.id} className="hover:bg-white/5 transition-colors">
+                        <td className="p-4 text-white font-medium">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center text-[10px] font-bold text-stone-400">
+                              {sub.email.charAt(0).toUpperCase()}
+                            </div>
+                            {sub.email}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="px-2 py-1 rounded text-[10px] font-bold uppercase border bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+                            Subscribed
+                          </span>
+                        </td>
+                        <td className="p-4 text-stone-500 text-xs">
+                          {new Date(sub.created_at || Date.now()).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </motion.div>

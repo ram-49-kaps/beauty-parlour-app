@@ -60,19 +60,23 @@ const LaunchCountdown = () => {
     if (isLive) return null;
 
     return (
-        <div className="fixed inset-0 z-[99999] bg-stone-950 flex flex-col items-center justify-center min-h-screen p-6 text-center overflow-hidden">
+        <div className="fixed inset-0 z-[99999] bg-stone-950 flex flex-col items-center justify-center min-h-screen text-center overflow-y-auto no-scrollbar">
 
             {/* Background Ambience */}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-stone-800/20 via-stone-950 to-stone-950 pointer-events-none"></div>
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-stone-800/20 via-stone-950 to-stone-950 pointer-events-none fixed"></div>
 
             {/* Main Content Centered */}
-            <div className="flex-grow flex flex-col items-center justify-center w-full max-w-4xl animate-fadeInUp relative z-10 px-4">
+            <div className="flex-grow flex flex-col items-center justify-center w-full max-w-4xl animate-fadeInUp relative z-10 px-4 py-10">
 
-                {/* LOGO AREA - Hide on very small screens to save space */}
+                {/* LOGO AREA */}
                 <div className="mb-8 md:mb-12 flex justify-center">
-                    <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-stone-900 border border-white/10 flex items-center justify-center shadow-2xl relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <span className="text-2xl md:text-4xl font-light text-white font-serif italic">F</span>
+                    <div className="w-20 h-20 md:w-28 md:h-28 rounded-full bg-black border border-white/10 flex items-center justify-center shadow-2xl relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity z-20"></div>
+                        <img
+                            src="/Gallery/logo.jpg"
+                            alt="Flawless By Drashti"
+                            className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-500"
+                        />
                     </div>
                 </div>
 

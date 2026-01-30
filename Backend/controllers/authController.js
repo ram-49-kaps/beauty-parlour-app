@@ -259,5 +259,33 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// --------------------- NOTIFY LAUNCH (NEW) ---------------------
+const notifyLaunch = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email required" });
+
+    // Check if exists
+    const users = await query('SELECT id FROM users WHERE email = ?', [email]);
+
+    if (users.length === 0) {
+      // Insert as a lead/subscriber
+      // We'll give a random password/name since they aren't fully registered yet,
+      // OR better, just insert them. Since your DB schema requires password, we can make a dummy one 
+      // or change schema. For safety, let's insert a dummy placeholder so they can "Reset Password" later.
+      await query(
+        'INSERT INTO users (email, name, role, password) VALUES (?, ?, ?, ?)',
+        [email, 'Subscriber', 'customer', 'PENDING_LAUNCH']
+      );
+    }
+
+    res.json({ message: "You have been added to the notification list!" });
+
+  } catch (error) {
+    console.error("Notify Error:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
 // Export all functions
-export { login, register, googleLogin, forgotPassword, resetPassword };
+export { login, register, googleLogin, forgotPassword, resetPassword, notifyLaunch };

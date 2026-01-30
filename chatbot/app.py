@@ -234,6 +234,12 @@ MEMORY & CONTEXT (EXTREMELY IMPORTANT):
 
 OUTPUT FORMATTING:
 - **Time Slots**: NEVER list slots as bullet points. ALWAYS use the interactive tag: ||SLOTS: 10:00, 11:00, 12:00||.
+
+ROBUSTNESS & INTENT RECOGNITION (CRITICAL):
+- Users may simple spelling mistakes (e.g., "servce" for "service", "tmrw" for "tomorrow", "apointmnt" for "appointment").
+- You MUST interpret these correctly based on context. Do not be confused by typos.
+- Do not point out the user's spelling mistakes. Just understand their intent and respond helpfully.
+- If a user says "book for tmrw", calculate the date for "tomorrow" based on Today's Date and proceed.
 """
 
 # ✅ Initialize Memory

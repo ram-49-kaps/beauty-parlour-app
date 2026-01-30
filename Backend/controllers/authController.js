@@ -45,7 +45,8 @@ const login = async (req, res) => {
     const token = createToken(user);
 
     // 📧 Notification: Login Success
-    emailService.sendLoginSuccessEmail(user.email, user.name);
+    // 📧 Login Email Skipped
+    // emailService.sendLoginSuccessEmail(user.email, user.name);
 
     res.json({
       message: 'Login successful',
@@ -177,7 +178,7 @@ const googleLogin = async (req, res) => {
     if (isNewUser) {
       emailService.sendWelcomeEmail(user.email, user.name); // Welcome!
     } else {
-      emailService.sendLoginSuccessEmail(user.email, user.name); // Welcome Back!
+      // emailService.sendLoginSuccessEmail(user.email, user.name); // Welcome Back!
     }
 
     res.json({

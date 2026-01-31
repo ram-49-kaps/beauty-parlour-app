@@ -136,6 +136,24 @@ const Dashboard = () => {
     setRefreshing(false);
   };
 
+  // --- HANDLE LAUNCH NOTIFICATION ---
+  const handleLaunchNotification = async () => {
+    if (!window.confirm("⚠️ ARE YOU SURE? This will send 'WE ARE LIVE' emails to ALL subscribers.")) return;
+
+    try {
+      setLoading(true);
+      const res = await axios.post(`${API_BASE_URL}/auth/trigger-launch`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      toast.success(res.data.message);
+    } catch (error) {
+      toast.error("Failed to send launch emails");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 📊 PROCESS DATA FOR CHART
   const processChartData = (bookingsData) => {
     const last7Days = {};

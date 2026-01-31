@@ -404,38 +404,38 @@ const Dashboard = () => {
     <div className="min-h-screen bg-black text-white font-sans selection:bg-white/20">
       <Toaster position="top-center" />
 
-      {/* HEADER */}
+      {/* HEADER - MOBILE OPTIMIZED */}
       <header className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-[1600px] mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white/20 shadow-lg bg-white">
+        <div className="max-w-[1600px] mx-auto px-4 h-16 md:h-20 flex items-center justify-between">
+          <div className="flex items-center gap-2 md:gap-4">
+            <div className="w-8 h-8 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white/20 shadow-lg bg-white">
               <img src="/Gallery/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
             </div>
-            <span className="text-lg md:text-xl font-light tracking-wide text-white">ADMIN<span className="font-bold text-white hidden sm:inline">PANEL</span></span>
+            <span className="text-sm md:text-xl font-light tracking-wide text-white">ADMIN<span className="font-bold text-white">PANEL</span></span>
           </div>
-          <div className="flex items-center gap-3 md:gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             {/* 🔄 REFRESH BUTTON */}
             <button
               onClick={handleRefresh}
               className={`p-2 rounded-full text-stone-400 hover:text-white hover:bg-white/10 transition-all ${refreshing ? 'animate-spin' : ''}`}
               title="Refresh Data"
             >
-              <RefreshCcw size={18} className="md:w-5 md:h-5" />
+              <RefreshCcw size={16} className="md:w-5 md:h-5" />
             </button>
 
-            <div className="h-6 w-px bg-white/10"></div>
+            <div className="h-5 w-px bg-white/10"></div>
 
             {/* ⚠️ RESET DATA BUTTON */}
             <button
               onClick={handleResetData}
-              className="flex items-center gap-2 text-[10px] md:text-xs font-bold uppercase tracking-widest text-red-400 hover:text-red-300 transition-colors"
+              className="flex items-center gap-1 md:gap-2 text-[9px] md:text-xs font-bold uppercase tracking-widest text-red-400 hover:text-red-300 transition-colors"
               title="Reset All Data (DANGER)"
             >
-              <AlertTriangle size={16} /> <span className="hidden sm:inline">Reset Data</span>
+              <AlertTriangle size={14} /> <span className="hidden sm:inline">Reset</span>
             </button>
 
-            <button onClick={handleLogout} className="flex items-center gap-2 text-[10px] md:text-xs font-bold uppercase tracking-widest text-stone-400 hover:text-red-400 transition-colors">
-              <LogOut size={16} /> <span className="hidden sm:inline">Logout</span>
+            <button onClick={handleLogout} className="flex items-center gap-1 md:gap-2 text-[9px] md:text-xs font-bold uppercase tracking-widest text-stone-400 hover:text-red-400 transition-colors">
+              <LogOut size={14} /> <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
@@ -445,10 +445,10 @@ const Dashboard = () => {
       <main className="pt-28 pb-12 px-6 max-w-[1600px] mx-auto space-y-8">
 
         {/* STATS & CHARTS */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-3 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
+          <div className="lg:col-span-3 space-y-4 md:space-y-6">
             {/* Stat Cards - Optimized for Mobile Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
               {/* Card 1: Total */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-stone-900 border border-white/10 p-4 rounded-xl relative overflow-hidden group">
                 <div className="absolute -right-4 -top-4 w-16 h-16 bg-blue-500/10 rounded-full blur-xl group-hover:bg-blue-500/20 transition-all" />
@@ -545,7 +545,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="flex gap-4 border-b border-white/10 pb-4">
+        <div className="flex gap-4 border-b border-white/10 pb-4 overflow-x-auto no-scrollbar">
           <button onClick={() => setActiveTab('bookings')} className={`pb-2 text-xs font-bold uppercase tracking-widest transition-colors ${activeTab === 'bookings' ? 'text-white border-b-2 border-white' : 'text-stone-500 hover:text-white'}`}>Bookings</button>
           {/* Services Tab */}
           <button
@@ -831,39 +831,60 @@ const Dashboard = () => {
                 <p>No subscribers yet. Share your launch page!</p>
               </div>
             ) : (
-              <div className="bg-stone-900/30 border border-white/5 rounded-2xl overflow-hidden">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-black/50 text-stone-500 text-xs uppercase tracking-widest">
-                      <th className="p-4">Email</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4">Joined Date</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5 text-sm text-stone-300">
-                    {subscribers.map((sub) => (
-                      <tr key={sub.id} className="hover:bg-white/5 transition-colors">
-                        <td className="p-4 text-white font-medium">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center text-[10px] font-bold text-stone-400">
-                              {sub.email.charAt(0).toUpperCase()}
-                            </div>
-                            {sub.email}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <span className="px-2 py-1 rounded text-[10px] font-bold uppercase border bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
-                            Subscribed
-                          </span>
-                        </td>
-                        <td className="p-4 text-stone-500 text-xs">
-                          {new Date(sub.created_at || Date.now()).toLocaleDateString()}
-                        </td>
+              <div className="space-y-4">
+                {/* MOBILE VIEW: Cards */}
+                <div className="md:hidden grid gap-4">
+                  {subscribers.map((sub) => (
+                    <div key={sub.id} className="bg-stone-900/50 border border-white/10 p-4 rounded-xl flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center text-xs font-bold text-stone-400">
+                          {sub.email.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="overflow-hidden">
+                          <p className="text-white text-sm font-medium truncate w-[160px]">{sub.email}</p>
+                          <p className="text-[10px] text-stone-500">{new Date(sub.created_at || Date.now()).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold uppercase text-emerald-500">Subscribed</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* DESKTOP VIEW: Table */}
+                <div className="hidden md:block bg-stone-900/30 border border-white/5 rounded-2xl overflow-hidden">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-black/50 text-stone-500 text-xs uppercase tracking-widest">
+                        <th className="p-4">Email</th>
+                        <th className="p-4">Status</th>
+                        <th className="p-4">Joined Date</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 text-sm text-stone-300">
+                      {subscribers.map((sub) => (
+                        <tr key={sub.id} className="hover:bg-white/5 transition-colors">
+                          <td className="p-4 text-white font-medium">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center text-[10px] font-bold text-stone-400">
+                                {sub.email.charAt(0).toUpperCase()}
+                              </div>
+                              {sub.email}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <span className="px-2 py-1 rounded text-[10px] font-bold uppercase border bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+                              Subscribed
+                            </span>
+                          </td>
+                          <td className="p-4 text-stone-500 text-xs">
+                            {new Date(sub.created_at || Date.now()).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div> {/* End of space-y-4 */}
             )}
           </motion.div>
         )}

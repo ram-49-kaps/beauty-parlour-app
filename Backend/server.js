@@ -40,6 +40,8 @@ app.use(cors({
   origin: [
     process.env.FRONTEND_URL,
     'https://flawlessbydrashti.vercel.app', // Explicitly allow new domain
+    'https://flawlessbydrashti.in', // ✅ Custom Domain
+    'https://www.flawlessbydrashti.in', // ✅ Custom Domain (subdomain)
     'https://beauty-parlour-app.vercel.app', // Allow old domain too (just in case)
     'http://localhost:5173'
   ],

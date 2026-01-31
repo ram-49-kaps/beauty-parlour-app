@@ -105,9 +105,11 @@ const Layout = ({ children }) => {
   }, [user]);
   // --- MODAL LOGIC END ---
 
+  const isAdminPage = location.pathname.startsWith('/admin-dashboard') || location.pathname.startsWith(SECRET_ADMIN_URL);
+
   return (
     <div className="flex flex-col min-h-screen">
-      <LaunchCountdown />
+      {!isAdminPage && <LaunchCountdown />}
       <SecretKeyListener />
       <CookieConsent />
       <ChatWidget />

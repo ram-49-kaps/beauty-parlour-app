@@ -326,9 +326,11 @@ const sendWelcomeEmail = async (email, name) => {
     'Welcome to Flawless Salon! 🎉',
     htmlContent
   );
-  // 6. LAUNCH NOTIFICATION EMAIL
-  const sendLaunchNotificationEmail = async (email) => {
-    const htmlContent = `
+}; // ✅ Closed sendWelcomeEmail properly
+
+// 6. LAUNCH NOTIFICATION EMAIL
+const sendLaunchNotificationEmail = async (email) => {
+  const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
         <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />
@@ -359,20 +361,20 @@ const sendWelcomeEmail = async (email, name) => {
     </div>
   `;
 
-    await sendEmailViaBrevo(
-      email,
-      '✨ WE ARE LIVE! Flawless By Drashti is Open',
-      htmlContent
-    );
-  };
+  await sendEmailViaBrevo(
+    email,
+    '✨ WE ARE LIVE! Flawless By Drashti is Open',
+    htmlContent
+  );
+};
 
-  // ✅ Final Export
-  export default {
-    sendBookingConfirmation,
-    sendBookingRejection,
-    sendBookingNotification,
-    sendPasswordResetEmail,
-    sendLoginSuccessEmail,
-    sendWelcomeEmail,
-    sendLaunchNotificationEmail
-  };
+// ✅ Final Export
+export default {
+  sendBookingConfirmation,
+  sendBookingRejection,
+  sendBookingNotification,
+  sendPasswordResetEmail,
+  sendLoginSuccessEmail,
+  sendWelcomeEmail,
+  sendLaunchNotificationEmail
+};

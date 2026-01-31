@@ -290,9 +290,8 @@ const notifyLaunch = async (req, res) => {
 // --------------------- TRIGGER LAUNCH EMAILS (ADMIN) ---------------------
 const triggerLaunchNotifications = async (req, res) => {
   try {
-    // 1. Fetch all subscribers
-    // We identify them by the placeholder password we set earlier
-    const subscribers = await query("SELECT email FROM users WHERE password = 'PENDING_LAUNCH'");
+    // 1. Fetch all subscribers (Notify Me users AND Registered Customers)
+    const subscribers = await query("SELECT email FROM users WHERE role = 'customer'");
 
     if (subscribers.length === 0) {
       return res.json({ message: "No subscribers found to notify." });

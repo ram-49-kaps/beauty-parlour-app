@@ -326,13 +326,52 @@ const sendWelcomeEmail = async (email, name) => {
     'Welcome to Flawless Salon! 🎉',
     htmlContent
   );
-};
+  // 6. LAUNCH NOTIFICATION EMAIL
+  const sendLaunchNotificationEmail = async (email) => {
+    const htmlContent = `
+    <div style="${styles.container}">
+      <div style="${styles.header}">
+        <img src="${LOGO_URL}" alt="Flawless Salon" style="${styles.logo}" />
+      </div>
+      
+      <div style="${styles.body}">
+        <h2 style="${styles.h2} text-align: center; color: #d4af37; font-size: 28px;">WE ARE LIVE! ✨</h2>
+        <p style="${styles.text} text-align: center;">The wait is finally over.</p>
+        
+        <p style="${styles.text}">Hello Beauty,</p>
+        <p style="${styles.text}">We are thrilled to announce that <strong>Flawless By Drashti</strong> is officially open for bookings. Experience luxury beauty services like never before.</p>
+        
+        <div style="background-color: #fce7f3; border: 1px solid #fbcfe8; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+            <p style="margin: 0; color: #be185d; font-weight: bold;">Exclusive Launch Offer</p>
+            <p style="margin: 5px 0 0 0; color: #831843;">Book your first appointment today and get a special welcome treatment.</p>
+        </div>
 
-export default {
-  sendBookingConfirmation,
-  sendBookingRejection,
-  sendBookingNotification,
-  sendPasswordResetEmail,
-  sendLoginSuccessEmail,
-  sendWelcomeEmail
-};
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${FRONTEND_URL}" style="background-color: #1c1917; color: #d4af37; padding: 16px 32px; text-decoration: none; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; border-radius: 4px; display: inline-block; border: 1px solid #d4af37;">
+            Enter The Sanctuary
+          </a>
+        </div>
+      </div>
+
+      <div style="${styles.footer}">
+        &copy; ${new Date().getFullYear()} Flawless Salon. All rights reserved.
+      </div>
+    </div>
+  `;
+
+    await sendEmailViaBrevo(
+      email,
+      '✨ WE ARE LIVE! Flawless By Drashti is Open',
+      htmlContent
+    );
+  };
+
+  export default {
+    sendBookingConfirmation,
+    sendBookingRejection,
+    sendBookingNotification,
+    sendPasswordResetEmail,
+    sendLoginSuccessEmail,
+    sendWelcomeEmail,
+    sendLaunchNotificationEmail
+  };

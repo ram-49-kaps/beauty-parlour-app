@@ -366,6 +366,7 @@ const sendWelcomeEmail = async (email, name) => {
     );
   };
 
+  // ✅ Final Export
   export default {
     sendBookingConfirmation,
     sendBookingRejection,

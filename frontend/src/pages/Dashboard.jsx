@@ -10,7 +10,7 @@ import {
   LayoutDashboard, Users, Calendar, IndianRupee, Bell, Search,
   MapPin, Cloud, Sun, LogOut, CheckCircle, XCircle, MoreHorizontal,
   Wind, Droplets, Trash2, Edit2, Plus, Filter, Loader2, AlertTriangle,
-  Clock, Download, RefreshCcw
+  Clock, Download, RefreshCcw, Send
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { API_BASE_URL, getImageUrl } from '../config'; // Import Config
@@ -795,7 +795,18 @@ const Dashboard = () => {
         {/* SUBSCRIBERS TAB */}
         {activeTab === 'subscribers' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <h3 className="text-xl font-light text-white mb-6">Launch Notification List</h3>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-light text-white">Launch Notification List</h3>
+              {subscribers.length > 0 && (
+                <button
+                  onClick={handleLaunchNotification}
+                  disabled={loading}
+                  className="bg-gradient-to-r from-amber-600 to-yellow-600 text-white px-6 py-2 rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-transform flex items-center gap-2 shadow-lg shadow-amber-900/20"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Launch & Notify All</>}
+                </button>
+              )}
+            </div>
 
             {subscribers.length === 0 ? (
               <div className="bg-stone-900/30 border border-white/5 rounded-2xl p-12 text-center text-stone-500">

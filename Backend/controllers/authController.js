@@ -287,5 +287,42 @@ const notifyLaunch = async (req, res) => {
   }
 };
 
+// --------------------- TRIGGER LAUNCH EMAILS (ADMIN) ---------------------
+const triggerLaunchNotifications = async (req, res) => {
+  try {
+    // 1. Fetch all subscribers
+    // We identify them by the placeholder password we set earlier
+    const subscribers = await query("SELECT email FROM users WHERE password = 'PENDING_LAUNCH'");
+
+    if (subscribers.length === 0) {
+      return res.json({ message: "No subscribers found to notify." });
+    }
+
+    console.log(`🚀 Starting Launch Notifications for ${subscribers.length} users...`);
+
+    // 2. Send Emails (in parallel for speed, or loop if rate limits concern)
+    // Using Promise.allSettled to ensure one failure doesn't stop others
+    const emailPromises = subscribers.map(sub =>
+      emailService.sendLaunchNotificationEmail(sub.email)
+    );
+
+    const results = await Promise.allSettled(emailPromises);
+
+    const sentCount = results.filter(r => r.status === 'fulfilled').length;
+    const failedCount = results.filter(r => r.status === 'rejected').length;
+
+    console.log(`✅ Launch Emails Sent: ${sentCount}, Failed: ${failedCount}`);
+
+    res.json({
+      message: `Launch notifications sent!`,
+      stats: { sent: sentCount, failed: failedCount, total: subscribers.length }
+    });
+
+  } catch (error) {
+    console.error("Launch Notification Error:", error);
+    res.status(500).json({ message: "Server Error triggering notifications" });
+  }
+};
+
 // Export all functions
-export { login, register, googleLogin, forgotPassword, resetPassword, notifyLaunch };
+export { login, register, googleLogin, forgotPassword, resetPassword, notifyLaunch, triggerLaunchNotifications };

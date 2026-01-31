@@ -884,7 +884,7 @@ const Dashboard = () => {
                     </tbody>
                   </table>
                 </div>
-              </div> {/* End of space-y-4 */}
+              </div>
             )}
           </motion.div>
         )}

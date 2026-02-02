@@ -32,9 +32,10 @@ CORS(app)
 
 # Groq LLM Setup
 llm = ChatGroq(
-    temperature=1,
+    temperature=0.6,
     groq_api_key=os.getenv("GROQ_API_KEY"),
-    model_name="meta-llama/llama-4-maverick-17b-128e-instruct"
+    model_name="llama-3.3-70b-versatile",
+    max_retries=2
 )
 
 
@@ -311,7 +312,8 @@ agent = create_structured_chat_agent(
 # ✅ Create Agent Executor
 # We use a custom error handler to prevent crashing on "Could not parse LLM output"
 def _handle_error(error) -> str:
-    return str(error).replace("Could not parse LLM output: `", "").replace("`", "")
+    # return str(error).replace("Could not parse LLM output: `", "").replace("`", "")
+    return "Output must be a valid JSON blob. Please correct your output format to standard JSON with 'action' and 'action_input' keys."
 
 agent_executor = AgentExecutor(
     agent=agent,
@@ -363,7 +365,10 @@ def chat_endpoint():
 
     except Exception as e:
         print(f"❌ SYSTEM ERROR: {e}")
-        chat_history = []
+        error_msg = str(e)
+        if "429" in error_msg or "Resource exhausted" in error_msg:
+             return jsonify({"reply": "I'm currently assisting too many guests! 🌸 Please try again in about a minute."}), 429
+        
         return jsonify({"reply": "I'm having a brief brain freeze. Please try asking again."})
 
 @app.route('/', methods=['GET'])

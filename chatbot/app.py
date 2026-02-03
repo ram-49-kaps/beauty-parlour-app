@@ -75,7 +75,7 @@ def list_all_services(query: str = "") -> str:
     
     if not services: return "We are currently updating our service menu. Please check back later!"
     
-    table = "\n| Service Name | Price | Duration |\n| :--- | :--- | :--- |\n"
+    table = "\n\n| Service Name | Price | Duration |\n| :--- | :--- | :--- |\n"
     for s in services:
         table += f"| {s['name']} | ₹{s['price']} | {s['duration']} mins |\n"
     return table

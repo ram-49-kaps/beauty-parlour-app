@@ -28,7 +28,7 @@ export const uploadProfileImage = async (req, res) => {
 // --------------------- GET SUBSCRIBERS ---------------------
 export const getSubscribers = async (req, res) => {
   try {
-    const subscribers = await query('SELECT id, email, created_at FROM users ORDER BY created_at DESC');
+    const subscribers = await query('SELECT id, email, phone, created_at FROM users ORDER BY created_at DESC');
     res.json(subscribers);
   } catch (error) {
     console.error("Error fetching subscribers:", error);

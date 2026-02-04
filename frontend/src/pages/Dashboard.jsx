@@ -814,21 +814,12 @@ const Dashboard = () => {
         {activeTab === 'subscribers' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-light text-white">Launch Notification List</h3>
-              {subscribers.length > 0 && (
-                <button
-                  onClick={handleLaunchNotification}
-                  disabled={loading}
-                  className="bg-gradient-to-r from-amber-600 to-yellow-600 text-white px-6 py-2 rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-transform flex items-center gap-2 shadow-lg shadow-amber-900/20"
-                >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Launch & Notify All</>}
-                </button>
-              )}
+              <h3 className="text-xl font-light text-white">Subscribers List</h3>
             </div>
 
             {subscribers.length === 0 ? (
               <div className="bg-stone-900/30 border border-white/5 rounded-2xl p-12 text-center text-stone-500">
-                <p>No subscribers yet. Share your launch page!</p>
+                <p>No subscribers yet.</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -842,6 +833,7 @@ const Dashboard = () => {
                         </div>
                         <div className="overflow-hidden">
                           <p className="text-white text-sm font-medium truncate w-[160px]">{sub.email}</p>
+                          <p className="text-[10px] text-stone-500 mt-1">{sub.phone || 'No Phone'}</p>
                           <p className="text-[10px] text-stone-500">{new Date(sub.created_at || Date.now()).toLocaleDateString()}</p>
                         </div>
                       </div>
@@ -856,6 +848,7 @@ const Dashboard = () => {
                     <thead>
                       <tr className="bg-black/50 text-stone-500 text-xs uppercase tracking-widest">
                         <th className="p-4">Email</th>
+                        <th className="p-4">Phone</th>
                         <th className="p-4">Status</th>
                         <th className="p-4">Joined Date</th>
                       </tr>
@@ -870,6 +863,9 @@ const Dashboard = () => {
                               </div>
                               {sub.email}
                             </div>
+                          </td>
+                          <td className="p-4 text-stone-400 font-mono text-xs">
+                            {sub.phone || '-'}
                           </td>
                           <td className="p-4">
                             <span className="px-2 py-1 rounded text-[10px] font-bold uppercase border bg-emerald-500/10 text-emerald-500 border-emerald-500/20">

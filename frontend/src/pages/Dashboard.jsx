@@ -628,6 +628,7 @@ const Dashboard = () => {
                           </div>
                           <div>
                             <h4 className="text-sm font-bold text-white leading-tight">{booking.customer_name}</h4>
+                            <p className="text-[10px] text-stone-500">{booking.customer_phone}</p>
                             <p className="text-[10px] text-stone-500">{booking.service_name}</p>
                           </div>
                         </div>
@@ -671,6 +672,7 @@ const Dashboard = () => {
                   <thead>
                     <tr className="bg-black/50 text-stone-500 text-xs uppercase tracking-widest">
                       <th className="p-4">Client</th>
+                      <th className="p-4">Phone</th>
                       <th className="p-4">Service</th>
                       <th className="p-4">Date & Time</th>
                       <th className="p-4">Amount</th>
@@ -679,11 +681,12 @@ const Dashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 text-sm text-stone-300">
-                    {loading ? <tr><td colSpan="6" className="p-8 text-center text-stone-500">Loading...</td></tr> :
-                      filteredBookings.length === 0 ? <tr><td colSpan="6" className="p-8 text-center text-stone-500">No bookings found.</td></tr> :
+                    {loading ? <tr><td colSpan="7" className="p-8 text-center text-stone-500">Loading...</td></tr> :
+                      filteredBookings.length === 0 ? <tr><td colSpan="7" className="p-8 text-center text-stone-500">No bookings found.</td></tr> :
                         filteredBookings.map((booking) => (
                           <tr key={booking.id} className="hover:bg-white/5 transition-colors group">
                             <td className="p-4"><div className="font-medium text-white">{booking.customer_name}</div><div className="text-xs text-stone-500">{booking.customer_email}</div></td>
+                            <td className="p-4 text-stone-400 font-mono text-xs">{booking.customer_phone || '-'}</td>
                             <td className="p-4"><span className="text-white">{booking.service_name}</span></td>
                             <td className="p-4"><div className="flex gap-2"><span className="bg-stone-800 px-2 py-1 rounded text-xs">{new Date(booking.booking_date).toLocaleDateString()}</span><span className="text-stone-400">{booking.booking_time}</span></div></td>
                             <td className="p-4 font-bold text-white">₹{booking.total_amount || booking.price}</td>

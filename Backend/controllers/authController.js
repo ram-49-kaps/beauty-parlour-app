@@ -291,7 +291,8 @@ const notifyLaunch = async (req, res) => {
 const triggerLaunchNotifications = async (req, res) => {
   try {
     // 1. Fetch all subscribers (Notify Me users AND Registered Customers)
-    const subscribers = await query("SELECT email FROM users WHERE role = 'customer'");
+    // removed WHERE role='customer' to match the dashboard count and notify everyone
+    const subscribers = await query("SELECT email FROM users");
 
     if (subscribers.length === 0) {
       return res.json({ message: "No subscribers found to notify." });

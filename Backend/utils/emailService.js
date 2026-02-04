@@ -51,10 +51,10 @@ const sendEmailViaBrevo = async (to, subject, htmlContent, attachments = []) => 
     }
 
     const result = await response.json();
-    console.log(`📨 Email sent via Brevo. MessageId=${result.messageId}`);
+    console.log(`📨 Email successfully sent to: ${to} (MessageId: ${result.messageId})`);
     return result;
   } catch (error) {
-    console.error('❌ Brevo email failed:', error.message);
+    console.error(`❌ FAILED to send email to: ${to}. Reason: ${error.message}`);
     throw error;
   }
 };

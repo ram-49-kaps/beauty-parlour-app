@@ -18,7 +18,6 @@ const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
 import SplashScreen from './components/SplashScreen';
 import ChatWidget from './components/ChatWidget';
 import CookieConsent from './components/CookieConsent';
-import LaunchCountdown from './components/LaunchCountdown';
 
 // 🔐 1. DEFINE YOUR SECRET URL
 // Even if someone guesses the shortcut, they still won't see this URL unless they know it exists.
@@ -109,7 +108,6 @@ const Layout = ({ children }) => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {!isAdminPage && <LaunchCountdown />}
       <SecretKeyListener />
       <CookieConsent />
       <ChatWidget />

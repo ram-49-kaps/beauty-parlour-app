@@ -33,7 +33,7 @@ CORS(app)
 llm = ChatGroq(
     temperature=0.4,  # Lower for more consistent formatting
     groq_api_key=os.getenv("GROQ_API_KEY"),
-    model_name="llama-3.1-70b-versatile",  # Better balance of speed + quality
+    model_name="llama-3.3-70b-versatile",  # Current supported model
     max_retries=2
 )
 

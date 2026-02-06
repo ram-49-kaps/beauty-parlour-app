@@ -31,9 +31,9 @@ CORS(app)
 
 # Groq LLM Setup
 llm = ChatGroq(
-    temperature=0.6,
+    temperature=0.4,  # Lower for more consistent formatting
     groq_api_key=os.getenv("GROQ_API_KEY"),
-    model_name="llama-3.1-8b-instant",
+    model_name="llama-3.1-70b-versatile",  # Better balance of speed + quality
     max_retries=2
 )
 
@@ -199,10 +199,16 @@ STYLE RULES:
 - Use Markdown tables for service lists.
 - Use interactive tags for time slots: ||SLOTS: 10:00, 11:00||
 
+CRITICAL - TOOL OUTPUT RULE:
+When a tool returns data (like services table or time slots), you MUST include that EXACT output in your final response.
+- If list_all_services returns a table, include THE FULL TABLE in your answer
+- If check_availability returns slots, include THE SLOTS TAG in your answer
+- NEVER summarize or omit tool output. Always show the complete data to the user.
+
 TOOL USAGE:
-1. list_all_services - For menu/pricing questions
+1. list_all_services - For menu/pricing questions. ALWAYS show the returned table.
 2. search_salon_info - For location/hours
-3. check_availability - Before confirming any slot
+3. check_availability - Before confirming any slot. Include the ||SLOTS:...|| tag.
 4. create_booking - Only when ALL details are collected
 5. get_booking_details - To check existing booking status
 

@@ -383,9 +383,9 @@ def health():
         return jsonify({"status": "healthy", "database": "connected", "timestamp": datetime.now().isoformat()}), 200
     return jsonify({"status": "unhealthy", "database": "disconnected"}), 500
 
-def self_ping_service(port):
+def self_ping_service():
     """Periodically pings the service to keep it alive (prevent cold start)."""
-    endpoint = f"http://127.0.0.1:{port}/health"
+    endpoint = f"http://127.0.0.1:{PORT}/health"
     print(f"⏰ Self-ping service started. Target: {endpoint}")
     
     # Initial wait for server to start
@@ -403,14 +403,15 @@ def self_ping_service(port):
         # Ping every 14 minutes (Render sleeps after 15 mins inactive)
         time.sleep(14 * 60)
 
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))
-    
-    # Start the self-ping thread
-    if os.environ.get("WERKZEUG_RUN_MAIN") != "true": 
-        # Pass port to the thread function
-        pinger = threading.Thread(target=self_ping_service, args=(port,), daemon=True)
-        pinger.start()
+# ✅ Global PORT definition for Gunicorn
+PORT = int(os.getenv("PORT", 8000))
 
-    print(f"🚀 Lily API Server running on http://localhost:{port}")
-    app.run(host='0.0.0.0', port=port, debug=True)
+# ✅ Start Self-Ping Thread (Runs on Import for Gunicorn)
+# Only start if not already running (simple check to avoid double threads in some setups)
+if os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+    pinger = threading.Thread(target=self_ping_service, daemon=True)
+    pinger.start()
+
+if __name__ == "__main__":
+    print(f"🚀 Lily API Server running on http://localhost:{PORT}")
+    app.run(host='0.0.0.0', port=PORT, debug=True)

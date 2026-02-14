@@ -12,6 +12,9 @@ from mysql.connector import Error
 # ✅ Flask Imports
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import threading
+import time
+import requests
 
 # ✅ LangChain Imports (Modern API)
 from langchain_groq import ChatGroq
@@ -373,9 +376,41 @@ def home():
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
+    """Robust health check that verifies DB connection."""
+    conn = get_db_connection()
+    if conn:
+        conn.close()
+        return jsonify({"status": "healthy", "database": "connected", "timestamp": datetime.now().isoformat()}), 200
+    return jsonify({"status": "unhealthy", "database": "disconnected"}), 500
+
+def self_ping_service(port):
+    """Periodically pings the service to keep it alive (prevent cold start)."""
+    endpoint = f"http://127.0.0.1:{port}/health"
+    print(f"⏰ Self-ping service started. Target: {endpoint}")
+    
+    # Initial wait for server to start
+    time.sleep(30)
+    
+    while True:
+        try:
+            response = requests.get(endpoint)
+            # Just touch the endpoint, don't spam logs unless error
+            if response.status_code != 200:
+                 print(f"⚠️ Self-ping warning: Status {response.status_code}")
+        except Exception as e:
+            print(f"⚠️ Self-ping error: {e}")
+            
+        # Ping every 14 minutes (Render sleeps after 15 mins inactive)
+        time.sleep(14 * 60)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
+    
+    # Start the self-ping thread
+    if os.environ.get("WERKZEUG_RUN_MAIN") != "true": 
+        # Pass port to the thread function
+        pinger = threading.Thread(target=self_ping_service, args=(port,), daemon=True)
+        pinger.start()
+
     print(f"🚀 Lily API Server running on http://localhost:{port}")
     app.run(host='0.0.0.0', port=port, debug=True)

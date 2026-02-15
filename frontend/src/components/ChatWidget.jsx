@@ -278,7 +278,7 @@ const ChatWidget = () => {
           <div className="bg-stone-950 p-4 border-b border-white/5 flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full border border-stone-700 overflow-hidden bg-white">
-                <img src="/Gallery/logo.png?v=2" alt="Logo" className="w-full h-full object-cover" />
+                <img src="/Gallery/logo.jpg?v=3" alt="Logo" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h3 className="text-white text-sm font-bold tracking-widest uppercase">Lily</h3>

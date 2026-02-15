@@ -37,40 +37,49 @@ const ChatWidget = () => {
     }
   }, [inputText]);
 
+  // Load voices on mount
+  const [voices, setVoices] = useState([]);
+  useEffect(() => {
+    const loadVoices = () => {
+      const available = window.speechSynthesis.getVoices();
+      setVoices(available);
+    };
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }, []);
+
   // Clean up speech on unmount
   useEffect(() => {
     return () => window.speechSynthesis.cancel();
   }, []);
 
-  // 🗣️ TEXT TO SPEECH HANDLER
+  // 🗣️ TEXT TO SPEECH HANDLER (Improved)
   const handleSpeak = (text, index) => {
     if (speakingIndex === index) {
-      // Stop speaking
       window.speechSynthesis.cancel();
       setSpeakingIndex(null);
     } else {
-      // transform text to be speakable (remove markdown)
-      window.speechSynthesis.cancel(); // Stop any current speech
+      window.speechSynthesis.cancel();
 
-      // Clean text: remove table markup, slot tags, asterisks
       let cleanText = text
-        .replace(/\|\|.*?\|\|/g, '') // Remove internal tags like ||SLOTS||
-        .replace(/\|/g, '')          // Remove table bars
-        .replace(/\*\*/g, '')        // Remove bold markers
-        .replace(/---/g, '');        // Remove table dividers
+        .replace(/\|\|.*?\|\|/g, '')
+        .replace(/\|/g, '')
+        .replace(/\*\*/g, '')
+        .replace(/---/g, '');
 
       const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.rate = 1;
-      utterance.pitch = 1.1; // Slightly higher/feminine pitch
 
-      // Try to find a good female voice
-      const voices = window.speechSynthesis.getVoices();
-      // Prioritize Google US English or Samantha (macOS) or Microsoft Zira
-      const preferredVoice = voices.find(v =>
-        v.name.includes("Google US English") ||
-        v.name.includes("Samantha") ||
-        v.name.includes("Zira")
-      );
+      // ⚡ FASTER SPEED: 1.0 is too slow, 1.2 is natural
+      utterance.rate = 1.2;
+      utterance.pitch = 1.0; // Natural female pitch
+
+      // 👩 FORCE FEMALE VOICE selection strategy
+      const preferredVoice = voices.find(v => v.name.includes("Google US English")) || // Best on Chrome
+        voices.find(v => v.name.includes("Samantha")) ||          // Best on Mac
+        voices.find(v => v.name.includes("Microsoft Zira")) ||    // Best on Windows
+        voices.find(v => v.name.includes("Female")) ||            // Generic Female
+        voices.find(v => v.lang.startsWith("en-"));               // Fallback English
+
       if (preferredVoice) utterance.voice = preferredVoice;
 
       utterance.onend = () => setSpeakingIndex(null);
@@ -269,7 +278,7 @@ const ChatWidget = () => {
           <div className="bg-stone-950 p-4 border-b border-white/5 flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full border border-stone-700 overflow-hidden bg-white">
-                <img src="/Gallery/logo.png" alt="Logo" className="w-full h-full object-cover" />
+                <img src="/Gallery/logo.png?v=2" alt="Logo" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h3 className="text-white text-sm font-bold tracking-widest uppercase">Lily</h3>

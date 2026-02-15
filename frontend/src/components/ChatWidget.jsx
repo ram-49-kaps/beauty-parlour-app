@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config'; // Import Config
-import { MessageCircle, X, Send, Loader2, LogIn, RotateCcw } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, LogIn, RotateCcw, Volume2, Square } from 'lucide-react';
 
 const ChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,6 +12,7 @@ const ChatWidget = () => {
   ]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [speakingIndex, setSpeakingIndex] = useState(null); // Track which message is speaking
 
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -36,9 +37,55 @@ const ChatWidget = () => {
     }
   }, [inputText]);
 
+  // Clean up speech on unmount
+  useEffect(() => {
+    return () => window.speechSynthesis.cancel();
+  }, []);
+
+  // 🗣️ TEXT TO SPEECH HANDLER
+  const handleSpeak = (text, index) => {
+    if (speakingIndex === index) {
+      // Stop speaking
+      window.speechSynthesis.cancel();
+      setSpeakingIndex(null);
+    } else {
+      // transform text to be speakable (remove markdown)
+      window.speechSynthesis.cancel(); // Stop any current speech
+
+      // Clean text: remove table markup, slot tags, asterisks
+      let cleanText = text
+        .replace(/\|\|.*?\|\|/g, '') // Remove internal tags like ||SLOTS||
+        .replace(/\|/g, '')          // Remove table bars
+        .replace(/\*\*/g, '')        // Remove bold markers
+        .replace(/---/g, '');        // Remove table dividers
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.rate = 1;
+      utterance.pitch = 1.1; // Slightly higher/feminine pitch
+
+      // Try to find a good female voice
+      const voices = window.speechSynthesis.getVoices();
+      // Prioritize Google US English or Samantha (macOS) or Microsoft Zira
+      const preferredVoice = voices.find(v =>
+        v.name.includes("Google US English") ||
+        v.name.includes("Samantha") ||
+        v.name.includes("Zira")
+      );
+      if (preferredVoice) utterance.voice = preferredVoice;
+
+      utterance.onend = () => setSpeakingIndex(null);
+      utterance.onerror = () => setSpeakingIndex(null);
+
+      window.speechSynthesis.speak(utterance);
+      setSpeakingIndex(index);
+    }
+  };
+
   // 🔄 REFRESH CHAT FUNCTION
   const handleRefresh = async () => {
     setIsLoading(true);
+    window.speechSynthesis.cancel(); // Stop speech on refresh
+    setSpeakingIndex(null);
     try {
       // 1. Tell Backend to Clear Memory
       await fetch(`${API_BASE_URL}/chat`, {
@@ -64,6 +111,9 @@ const ChatWidget = () => {
     const textToSend = textOverride || inputText;
     if (!textToSend.trim()) return;
 
+    window.speechSynthesis.cancel(); // Stop speech on new message
+    setSpeakingIndex(null);
+
     // 1. Add User Message immediately
     const userMsg = { text: textToSend, isBot: false };
     setMessages(prev => [...prev, userMsg]);
@@ -74,9 +124,6 @@ const ChatWidget = () => {
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
     try {
-      // ✅ FIXED: Pointing to NODE.JS Backend (Port 5001)
-      // ✅ FIXED: Pointing to NODE.JS Backend (Port 5001)
-      // ✅ FIXED: Using API_BASE_URL from config
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -141,13 +188,7 @@ const ChatWidget = () => {
                 onClick={() => {
                   setInputText(slot);
                   setTimeout(() => {
-                    // Trigger send manually since state update might be slow? 
-                    // actually better to just call a send helper, but handleSend uses current state.
-                    // Let's just set it and let user click send OR auto-send if we refactor.
-                    // For now, let's just populate it.
-                    // Actually, improved UX: Auto-send!
                     const fakeEvent = { preventDefault: () => { } };
-                    // We need to pass the text directly because setState is async
                     handleSend(fakeEvent, slot);
                   }, 0);
                 }}
@@ -228,7 +269,7 @@ const ChatWidget = () => {
           <div className="bg-stone-950 p-4 border-b border-white/5 flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full border border-stone-700 overflow-hidden bg-white">
-                <img src="/Gallery/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
+                <img src="/Gallery/logo.png" alt="Logo" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h3 className="text-white text-sm font-bold tracking-widest uppercase">Lily</h3>
@@ -259,7 +300,19 @@ const ChatWidget = () => {
               <div key={idx} className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'}`}>
                 <div className={`max-w-[90%] ${msg.isBot ? 'bg-transparent pl-0' : 'bg-stone-800 px-4 py-3 rounded-2xl rounded-tr-sm text-white'}`}>
 
-                  {msg.isBot && <div className="text-[10px] text-stone-500 uppercase tracking-widest mb-1">Lily</div>}
+                  {msg.isBot && (
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] text-stone-500 uppercase tracking-widest">Lily</span>
+                      {/* 🔊 SPEAKER BUTTON */}
+                      <button
+                        onClick={() => handleSpeak(msg.text, idx)}
+                        className="p-1 text-stone-500 hover:text-white transition-colors ml-2"
+                        title={speakingIndex === idx ? "Stop Reading" : "Read Aloud"}
+                      >
+                        {speakingIndex === idx ? <Square size={10} fill="currentColor" /> : <Volume2 size={12} />}
+                      </button>
+                    </div>
+                  )}
 
                   <div className={`text-sm leading-relaxed ${msg.isBot ? 'text-stone-300' : 'text-white'}`}>
                     {renderMessageContent(msg.text)}

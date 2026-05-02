@@ -118,7 +118,11 @@ const Login = () => {
               </div>
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center">
+              <label className={`flex items-center gap-2 cursor-pointer ${isDark ? 'text-stone-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}>
+                <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900 accent-black bg-transparent" defaultChecked />
+                <span className="text-xs font-bold uppercase tracking-widest">Remember Me</span>
+              </label>
               <Link to="/forgot-password" className={`text-xs font-bold uppercase tracking-widest transition-colors ${isDark ? 'text-stone-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}>Forgot Password?</Link>
             </div>
 

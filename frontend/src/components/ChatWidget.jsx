@@ -2,7 +2,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { API_BASE_URL } from '../config'; // Import Config
+import { useTheme } from '../context/ThemeContext';
+import { API_BASE_URL } from '../config';
 import { MessageCircle, X, Send, Loader2, LogIn, RotateCcw, Volume2, Square } from 'lucide-react';
 
 const ChatWidget = () => {
@@ -12,15 +13,15 @@ const ChatWidget = () => {
   ]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [speakingIndex, setSpeakingIndex] = useState(null); // Track which message is speaking
+  const [speakingIndex, setSpeakingIndex] = useState(null);
 
   const { user } = useAuth();
+  const { isDark } = useTheme();
   const navigate = useNavigate();
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
-  // Auto-scroll to bottom of chat
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -29,7 +30,6 @@ const ChatWidget = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Handle textarea auto-resize
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -37,7 +37,6 @@ const ChatWidget = () => {
     }
   }, [inputText]);
 
-  // Load voices on mount
   const [voices, setVoices] = useState([]);
   useEffect(() => {
     const loadVoices = () => {
@@ -48,12 +47,10 @@ const ChatWidget = () => {
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }, []);
 
-  // Clean up speech on unmount
   useEffect(() => {
     return () => window.speechSynthesis.cancel();
   }, []);
 
-  // 🗣️ TEXT TO SPEECH HANDLER (Improved)
   const handleSpeak = (text, index) => {
     if (speakingIndex === index) {
       window.speechSynthesis.cancel();
@@ -68,17 +65,14 @@ const ChatWidget = () => {
         .replace(/---/g, '');
 
       const utterance = new SpeechSynthesisUtterance(cleanText);
-
-      // ⚡ FASTER SPEED: 1.0 is too slow, 1.2 is natural
       utterance.rate = 1.2;
-      utterance.pitch = 1.0; // Natural female pitch
+      utterance.pitch = 1.0;
 
-      // 👩 FORCE FEMALE VOICE selection strategy
-      const preferredVoice = voices.find(v => v.name.includes("Google US English")) || // Best on Chrome
-        voices.find(v => v.name.includes("Samantha")) ||          // Best on Mac
-        voices.find(v => v.name.includes("Microsoft Zira")) ||    // Best on Windows
-        voices.find(v => v.name.includes("Female")) ||            // Generic Female
-        voices.find(v => v.lang.startsWith("en-"));               // Fallback English
+      const preferredVoice = voices.find(v => v.name.includes("Google US English")) ||
+        voices.find(v => v.name.includes("Samantha")) ||
+        voices.find(v => v.name.includes("Microsoft Zira")) ||
+        voices.find(v => v.name.includes("Female")) ||
+        voices.find(v => v.lang.startsWith("en-"));
 
       if (preferredVoice) utterance.voice = preferredVoice;
 
@@ -90,20 +84,17 @@ const ChatWidget = () => {
     }
   };
 
-  // 🔄 REFRESH CHAT FUNCTION
   const handleRefresh = async () => {
     setIsLoading(true);
-    window.speechSynthesis.cancel(); // Stop speech on refresh
+    window.speechSynthesis.cancel();
     setSpeakingIndex(null);
     try {
-      // 1. Tell Backend to Clear Memory
       await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: "reset" }),
       });
 
-      // 2. Reset Frontend UI
       setMessages([
         { text: "Hello. I am Lily, your AI Concierge. How may I assist you with services, pricing, or bookings today?", isBot: true }
       ]);
@@ -120,16 +111,14 @@ const ChatWidget = () => {
     const textToSend = textOverride || inputText;
     if (!textToSend.trim()) return;
 
-    window.speechSynthesis.cancel(); // Stop speech on new message
+    window.speechSynthesis.cancel();
     setSpeakingIndex(null);
 
-    // 1. Add User Message immediately
     const userMsg = { text: textToSend, isBot: false };
     setMessages(prev => [...prev, userMsg]);
     setInputText("");
     setIsLoading(true);
 
-    // Reset height
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
     try {
@@ -138,13 +127,11 @@ const ChatWidget = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMsg.text,
-          isLoggedIn: !!user // 🟢 Send Login Status
+          isLoggedIn: !!user
         }),
       });
 
       const data = await response.json();
-
-      // 3. Add AI Response
       setMessages(prev => [...prev, { text: data.reply, isBot: true }]);
 
     } catch (error) {
@@ -162,16 +149,14 @@ const ChatWidget = () => {
     }
   };
 
-  // 🧱 Helper to Render Markdown Tables or Text
   const renderMessageContent = (text) => {
-    // 1. Check for Login Wall
     if (text.includes("||LOGIN_REQUIRED||")) {
       return (
         <div className="flex flex-col gap-3">
           <p>{text.replace("||LOGIN_REQUIRED||", "")}</p>
           <button
             onClick={() => { setIsOpen(false); navigate('/login'); }}
-            className="flex items-center justify-center gap-2 bg-stone-900 hover:bg-black text-white py-2 px-4 rounded border border-stone-700 text-xs font-bold uppercase transition-colors"
+            className={`flex items-center justify-center gap-2 py-2 px-4 rounded border text-xs font-bold uppercase transition-colors ${isDark ? 'bg-white text-black hover:bg-gray-200 border-gray-200' : 'bg-gray-900 hover:bg-gray-800 text-white border-gray-700'}`}
           >
             <LogIn size={14} /> Login to Continue
           </button>
@@ -179,7 +164,6 @@ const ChatWidget = () => {
       );
     }
 
-    // 2A. Check for Time Slots (||SLOTS: 10:00, 11:00||)
     if (text.includes("||SLOTS:")) {
       const parts = text.split("||SLOTS:");
       const messagePart = parts[0];
@@ -201,7 +185,7 @@ const ChatWidget = () => {
                     handleSend(fakeEvent, slot);
                   }, 0);
                 }}
-                className="bg-stone-700 hover:bg-stone-600 border border-stone-600 text-white text-xs px-3 py-2 rounded-lg transition-colors"
+                className={`text-xs px-3 py-2 rounded-lg transition-colors ${isDark ? 'bg-stone-700 hover:bg-stone-600 border border-white/10 text-white' : 'bg-gray-200 hover:bg-gray-300 border border-gray-300 text-gray-800'}`}
                 title={`Select ${slot}`}
               >
                 {slot}
@@ -212,16 +196,13 @@ const ChatWidget = () => {
       );
     }
 
-    // 2B. Check for Markdown Table (simple detection: starts with |)
     if (text.includes("|") && text.includes("---")) {
       const lines = text.split('\n');
       const tableRows = lines.filter(line => line.trim().startsWith('|'));
       const otherLines = lines.filter(line => !line.trim().startsWith('|') && line.trim() !== '');
 
       if (tableRows.length > 2) {
-        // Parse Header
         const headers = tableRows[0].split('|').map(h => h.trim()).filter(h => h);
-        // Skip separator line (tableRows[1])
         const rows = tableRows.slice(2).map(row =>
           row.split('|').map(cell => cell.trim()).filter(cell => cell)
         );
@@ -229,16 +210,16 @@ const ChatWidget = () => {
         return (
           <div className="space-y-2">
             {otherLines.map((line, i) => <p key={i}>{line}</p>)}
-            <div className="overflow-x-auto rounded border border-stone-300/20 mt-2">
+            <div className={`overflow-x-auto rounded border mt-2 ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
               <table className="w-full text-xs text-left">
-                <thead className="bg-stone-900/10 font-bold text-stone-300">
+                <thead className={`font-bold ${isDark ? 'bg-stone-800 text-stone-300' : 'bg-gray-100 text-gray-700'}`}>
                   <tr>
-                    {headers.map((h, i) => <th key={i} className="p-2 border-b border-stone-300/10">{h}</th>)}
+                    {headers.map((h, i) => <th key={i} className="p-2 border-b border-gray-200">{h}</th>)}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-stone-300/10">
+                <tbody className="divide-y divide-gray-200">
                   {rows.map((row, i) => (
-                    <tr key={i} className="hover:bg-white/5">
+                    <tr key={i} className={isDark ? 'hover:bg-stone-800' : 'hover:bg-gray-50'}>
                       {row.map((cell, j) => <td key={j} className="p-2">{cell}</td>)}
                     </tr>
                   ))}
@@ -250,15 +231,13 @@ const ChatWidget = () => {
       }
     }
 
-    // 3. Default Text Rendering (with Bold parsing)
     return text.split('\n').map((line, i) => {
-      // Split by bold pattern **text**
       const parts = line.split(/(\*\*.*?\*\*)/g);
       return (
         <p key={i} className="mb-1 last:mb-0 min-h-[1em]">
           {parts.map((part, j) => {
             if (part.startsWith('**') && part.endsWith('**')) {
-              return <strong key={j} className="font-bold text-white">{part.slice(2, -2)}</strong>;
+              return <strong key={j} className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{part.slice(2, -2)}</strong>;
             }
             return part;
           })}
@@ -270,33 +249,32 @@ const ChatWidget = () => {
   return (
     <div className="fixed bottom-4 right-4 z-[9999] font-sans flex flex-col items-end">
 
-      {/* 🟢 CHAT WINDOW */}
+      {/* CHAT WINDOW */}
       {isOpen && (
-        <div className="mb-2 w-[90vw] max-w-[400px] h-[70vh] max-h-[600px] bg-stone-900 border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-[slideUp_0.3s_ease-out]">
+        <div className={`mb-2 w-[90vw] max-w-[400px] h-[70vh] max-h-[600px] border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-[slideUp_0.3s_ease-out] ${isDark ? 'bg-stone-950 border-white/10' : 'bg-white border-gray-200'}`}>
 
           {/* Header */}
-          <div className="bg-stone-950 p-4 border-b border-white/5 flex justify-between items-center">
+          <div className={`p-4 border-b flex justify-between items-center ${isDark ? 'bg-stone-900 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full border border-stone-700 overflow-hidden bg-white">
+              <div className={`w-10 h-10 rounded-full border overflow-hidden shadow-sm ${isDark ? 'border-white/10 bg-stone-800' : 'border-gray-200 bg-white'}`}>
                 <img src="/Gallery/logo.jpg?v=3" alt="Logo" className="w-full h-full object-cover" />
               </div>
               <div>
-                <h3 className="text-white text-sm font-bold tracking-widest uppercase">Lily</h3>
-                <p className="text-stone-500 text-[10px] uppercase tracking-widest">Your Beauty Assistant</p>
+                <h3 className={`text-sm font-bold tracking-widest uppercase ${isDark ? 'text-white' : 'text-gray-900'}`}>Lily</h3>
+                <p className="text-gray-400 text-[10px] uppercase tracking-widest">Your Beauty Assistant</p>
               </div>
             </div>
-            {/* Header Actions */}
             <div className="flex gap-1">
               <button
                 onClick={handleRefresh}
-                className="p-2 text-stone-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                className={`p-2 rounded-lg transition-colors ${isDark ? 'text-stone-400 hover:text-white hover:bg-white/10' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}
                 title="Reset Conversation"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-2 text-stone-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -304,18 +282,17 @@ const ChatWidget = () => {
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-black/20">
+          <div className={`flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar ${isDark ? 'bg-stone-950' : 'bg-gray-50/50'}`}>
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'}`}>
-                <div className={`max-w-[90%] ${msg.isBot ? 'bg-transparent pl-0' : 'bg-stone-800 px-4 py-3 rounded-2xl rounded-tr-sm text-white'}`}>
+                <div className={`max-w-[90%] ${msg.isBot ? 'bg-transparent pl-0' : isDark ? 'bg-white/10 px-4 py-3 rounded-2xl rounded-tr-sm text-white' : 'bg-gray-900 px-4 py-3 rounded-2xl rounded-tr-sm text-white'}`}>
 
                   {msg.isBot && (
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] text-stone-500 uppercase tracking-widest">Lily</span>
-                      {/* 🔊 SPEAKER BUTTON */}
+                      <span className="text-[10px] text-gray-400 uppercase tracking-widest">Lily</span>
                       <button
                         onClick={() => handleSpeak(msg.text, idx)}
-                        className="p-1 text-stone-500 hover:text-white transition-colors ml-2"
+                        className={`p-1 transition-colors ml-2 ${isDark ? 'text-stone-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}
                         title={speakingIndex === idx ? "Stop Reading" : "Read Aloud"}
                       >
                         {speakingIndex === idx ? <Square size={10} fill="currentColor" /> : <Volume2 size={12} />}
@@ -323,18 +300,17 @@ const ChatWidget = () => {
                     </div>
                   )}
 
-                  <div className={`text-sm leading-relaxed ${msg.isBot ? 'text-stone-300' : 'text-white'}`}>
+                  <div className={`text-sm leading-relaxed ${msg.isBot ? (isDark ? 'text-stone-300' : 'text-gray-600') : 'text-white'}`}>
                     {renderMessageContent(msg.text)}
                   </div>
                 </div>
               </div>
             ))}
 
-            {/* Loading Indicator */}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-stone-800 p-3 rounded-2xl rounded-tl-none border border-white/5">
-                  <Loader2 className="w-4 h-4 text-stone-400 animate-spin" />
+                <div className={`p-3 rounded-2xl rounded-tl-none border ${isDark ? 'bg-stone-800 border-white/10' : 'bg-gray-100 border-gray-200'}`}>
+                  <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
                 </div>
               </div>
             )}
@@ -342,8 +318,8 @@ const ChatWidget = () => {
           </div>
 
           {/* Input Area */}
-          <div className="p-4 bg-stone-900 border-t border-stone-800">
-            <div className="relative flex items-end gap-2 bg-black border border-stone-800 rounded-xl p-2 focus-within:border-stone-600 transition-colors">
+          <div className={`p-4 border-t ${isDark ? 'bg-stone-900 border-white/10' : 'bg-white border-gray-200'}`}>
+            <div className={`relative flex items-end gap-2 border rounded-xl p-2 transition-colors ${isDark ? 'bg-stone-800 border-white/10 focus-within:border-white/30' : 'bg-gray-50 border-gray-200 focus-within:border-gray-400'}`}>
               <textarea
                 ref={textareaRef}
                 placeholder="Type your message..."
@@ -351,33 +327,32 @@ const ChatWidget = () => {
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 rows={1}
-                className="flex-1 bg-transparent text-white text-sm px-3 py-2 max-h-32 focus:outline-none resize-none placeholder:text-stone-700 custom-scrollbar"
+                className={`flex-1 bg-transparent text-sm px-3 py-2 max-h-32 focus:outline-none resize-none placeholder:text-gray-400 custom-scrollbar ${isDark ? 'text-white' : 'text-gray-900'}`}
                 style={{ minHeight: '40px' }}
               />
               <button
                 onClick={handleSend}
                 disabled={isLoading || !inputText.trim()}
-                className="p-2 bg-white text-black rounded-lg hover:bg-stone-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-0.5"
+                className={`p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-0.5 ${isDark ? 'bg-white text-black hover:bg-gray-200' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
               >
                 <Send className="w-4 h-4" />
               </button>
             </div>
             <div className="text-center mt-2">
-              <span className="text-[9px] text-stone-600 uppercase tracking-widest">Powered by Flawless Engine</span>
+              <span className="text-[9px] text-gray-400 uppercase tracking-widest">Powered by Flawless Engine</span>
             </div>
           </div>
 
         </div>
       )}
 
-      {/* 🔴 FLOATING BUTTON (Open) */}
+      {/* FLOATING BUTTON (Open) */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="group relative flex items-center justify-center gap-3 bg-stone-950 text-white pl-5 pr-6 h-14 rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.4)] hover:scale-105 transition-all duration-300 z-50 border border-white/10"
+          className="group relative flex items-center justify-center gap-3 pl-5 pr-6 h-14 rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:scale-105 transition-all duration-300 z-50 bg-black text-white border border-gray-700"
         >
-          {/* Subtle Ripple/Pulse behind */}
-          <div className="absolute inset-0 rounded-full bg-white/20 animate-ping opacity-20"></div>
+          <div className={`absolute inset-0 rounded-full animate-ping opacity-20 ${isDark ? 'bg-white/20' : 'bg-gray-700/20'}`}></div>
 
           <MessageCircle className="w-5 h-5" />
           <span className="font-bold text-sm tracking-widest uppercase">Ask Lily</span>

@@ -36,6 +36,10 @@ export const deleteProfileImage = () => api.delete('/users/profile-image');
 export const getServices = () => api.get('/services');
 export const createBooking = (bookingData) => api.post('/bookings', bookingData);
 
+// 💳 Razorpay Payment APIs
+export const createPaymentOrder = (bookingData) => api.post('/bookings/create-order', bookingData);
+export const verifyPayment = (paymentData) => api.post('/bookings/verify-payment', paymentData);
+
 // ✅ FIX 1: Added '/bookings' prefix (matches server.js + bookingRoutes.js)
 export const getUserBookings = () => api.get('/bookings/my-bookings');
 
@@ -46,12 +50,20 @@ export const getBookedSlots = (date) => api.get(`/bookings/slots?date=${date}`);
 export const rescheduleBooking = (id, date, time) =>
   api.put(`/bookings/${id}/reschedule`, { booking_date: date, booking_time: time });
 
+// --- COUPON APIS ---
+export const validateCoupon = (code) => api.post('/coupons/validate', { code });
+export const checkCouponEligibility = () => api.get('/coupons/check-eligibility');
+
 // --- ADMIN DASHBOARD APIS ---
 export const getBookings = () => api.get('/bookings');
 
 // ✅ FIX 3: Changed PATCH to PUT (Backend uses router.put)
 export const updateBookingStatus = (id, status, rejection_reason) =>
   api.put(`/bookings/${id}/status`, { status, rejection_reason });
+
+// 💳 Admin: Update payment status (Mark Remaining Paid)
+export const updatePaymentStatus = (id, payment_status) =>
+  api.put(`/bookings/${id}/payment-status`, { payment_status });
 
 // ✅ FIX 4: Corrected path to match bookingRoutes.js (/stats is inside /bookings)
 export const getDashboardStats = () => api.get('/bookings/stats');

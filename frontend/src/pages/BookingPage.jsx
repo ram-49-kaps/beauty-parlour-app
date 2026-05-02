@@ -1,22 +1,30 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Mail, Phone, User, MessageSquare, CheckCircle, Sparkles, ArrowRight, IndianRupee, Plus, Check } from 'lucide-react';
-import { getServices, createBooking, getBookedSlots } from '../services/api';
+import { Calendar, Clock, Mail, Phone, User, MessageSquare, CheckCircle, Sparkles, ArrowRight, IndianRupee, Plus, Check, Tag, Gift, ShieldCheck, Timer, AlertCircle, FileDown } from 'lucide-react';
+import { generateReceipt } from '../utils/receiptGenerator';
+import { getServices, createPaymentOrder, verifyPayment, getBookedSlots, validateCoupon, checkCouponEligibility } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import toast, { Toaster } from 'react-hot-toast';
 
 const BookingPage = () => {
-  // Data States
   const [mainServices, setMainServices] = useState([]);
   const [addOnServices, setAddOnServices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
-
-  // Selection States
-  const [selectedAddOns, setSelectedAddOns] = useState([]); // Array of IDs
-  const [blockedTimes, setBlockedTimes] = useState([]); // Array of unavailable start times
+  const [lastBooking, setLastBooking] = useState(null);
+  const [selectedAddOns, setSelectedAddOns] = useState([]);
+  const [blockedTimes, setBlockedTimes] = useState([]);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponApplied, setCouponApplied] = useState(null);
+  const [couponError, setCouponError] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponEligible, setCouponEligible] = useState(null);
+  const [showCoupon, setShowCoupon] = useState(false);
 
   const { user } = useAuth();
+  const { isDark } = useTheme();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -29,33 +37,42 @@ const BookingPage = () => {
     notes: ''
   });
 
-  // Redirect to Home if not logged in
   useEffect(() => {
-    if (!user) {
-      navigate('/');
-    }
+    if (!user) navigate('/');
   }, [user, navigate]);
 
   useEffect(() => {
     fetchServices();
+    fetchCouponEligibility();
+    loadRazorpayScript();
   }, []);
+
+  const loadRazorpayScript = () => {
+    if (document.getElementById('razorpay-script')) return;
+    const script = document.createElement('script');
+    script.id = 'razorpay-script';
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+  };
+
+  const fetchCouponEligibility = async () => {
+    try {
+      const res = await checkCouponEligibility();
+      if (res.data.eligible) setCouponEligible(res.data.coupon);
+    } catch (e) { console.error('Coupon check failed', e); }
+  };
 
   const fetchServices = async () => {
     try {
       const response = await getServices();
       const allServices = response.data;
-
-      // 1. LOGIC: Filter Main vs Add-ons
-      // We assume "Lash" and "Lens" are extras. Everything else is a main service.
       const extras = allServices.filter(s =>
-        s.name.toLowerCase().includes('lash') ||
-        s.name.toLowerCase().includes('lens')
+        s.name.toLowerCase().includes('lash') || s.name.toLowerCase().includes('lens')
       );
       const main = allServices.filter(s =>
-        !s.name.toLowerCase().includes('lash') &&
-        !s.name.toLowerCase().includes('lens')
+        !s.name.toLowerCase().includes('lash') && !s.name.toLowerCase().includes('lens')
       );
-
       setMainServices(main);
       setAddOnServices(extras);
     } catch (error) {
@@ -64,7 +81,6 @@ const BookingPage = () => {
     }
   };
 
-  // 1.1 LOGIC: Fetch Blocked Slots when Date Changes
   useEffect(() => {
     if (formData.booking_date) {
       fetchBlockedSlots(formData.booking_date);
@@ -76,26 +92,14 @@ const BookingPage = () => {
   const fetchBlockedSlots = async (date) => {
     try {
       const response = await getBookedSlots(date);
-      // response.data is array of objects: { time: "10:00:00", duration: 60 }
-
-      // Calculate all 30-min intervals that are occupied
       const occupied = new Set();
-
       response.data.forEach(booking => {
         const start = new Date(`${date}T${booking.time}`);
-        // If parsing fails (e.g. time format issue), skip
         if (isNaN(start.getTime())) return;
-
-        // Mark the start time as blocked
-        const startStr = booking.time.substring(0, 5); // "10:00"
+        const startStr = booking.time.substring(0, 5);
         occupied.add(startStr);
-
-        // If duration > 30, block subsequent slots
-        // This is a simple approximation. For strict logic, we'd check overlap.
-        // Assuming slots are 30 mins apart.
-        const durationMins = booking.duration || 60; // Default 60 if null
+        const durationMins = booking.duration || 60;
         const slotsCount = Math.ceil(durationMins / 30);
-
         for (let i = 1; i < slotsCount; i++) {
           const nextSlot = new Date(start.getTime() + i * 30 * 60000);
           const h = nextSlot.getHours().toString().padStart(2, '0');
@@ -103,14 +107,12 @@ const BookingPage = () => {
           occupied.add(`${h}:${m}`);
         }
       });
-
       setBlockedTimes(Array.from(occupied));
     } catch (err) {
       console.error("Failed to fetch blocked slots", err);
     }
   };
 
-  // 2. LOGIC: Toggle Checkboxes for Add-ons
   const toggleAddOn = (id) => {
     if (selectedAddOns.includes(id)) {
       setSelectedAddOns(selectedAddOns.filter(itemId => itemId !== id));
@@ -119,26 +121,42 @@ const BookingPage = () => {
     }
   };
 
-  // 3. LOGIC: Calculate Total Price
   const calculateTotal = () => {
-    // Price of Main Service
     const selectedMain = mainServices.find(s => s.id === parseInt(formData.service_id));
     const mainPrice = selectedMain ? parseFloat(selectedMain.price) : 0;
-
-    // Price of Selected Add-ons
     const addOnPrice = selectedAddOns.reduce((total, id) => {
       const extra = addOnServices.find(s => s.id === id);
       return total + (extra ? parseFloat(extra.price) : 0);
     }, 0);
-
     return mainPrice + addOnPrice;
   };
 
+  const getDiscount = () => couponApplied ? Math.round(calculateTotal() * couponApplied.discount_percent / 100 * 100) / 100 : 0;
+  const getFinalTotal = () => calculateTotal() - getDiscount();
+  const getAdvance = () => Math.ceil(getFinalTotal() / 2);
+  const getRemaining = () => getFinalTotal() - getAdvance();
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true); setCouponError('');
+    try {
+      const res = await validateCoupon(couponCode.trim());
+      if (res.data.valid) {
+        setCouponApplied({ code: res.data.code, discount_percent: res.data.discount_percent });
+        setCouponError('');
+        toast.success(`${res.data.discount_percent}% discount applied successfully!`, { icon: '🎉', duration: 3000 });
+      } else {
+        setCouponError(res.data.message); setCouponApplied(null);
+        toast.error(res.data.message || 'Invalid coupon code');
+      }
+    } catch (e) { setCouponError('Failed to validate coupon.'); setCouponApplied(null); toast.error('Failed to validate coupon'); }
+    setCouponLoading(false);
+  };
+
+  const removeCoupon = () => { setCouponApplied(null); setCouponCode(''); setCouponError(''); toast('Coupon removed', { icon: '🗑️' }); };
+
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
     setError('');
   };
 
@@ -147,7 +165,6 @@ const BookingPage = () => {
     setLoading(true);
     setError('');
 
-    // Validation
     if (!formData.customer_name || !formData.customer_email || !formData.customer_phone ||
       !formData.service_id || !formData.booking_date || !formData.booking_time) {
       setError('Please fill in all required fields');
@@ -180,43 +197,82 @@ const BookingPage = () => {
     }
 
     try {
-      // 4. LOGIC: Add selected add-ons to notes so the salon knows
-      const selectedAddOnNames = addOnServices
-        .filter(s => selectedAddOns.includes(s.id))
-        .map(s => s.name)
-        .join(', ');
-
-      const finalNotes = selectedAddOnNames
-        ? `Extras: ${selectedAddOnNames}. \nUser Notes: ${formData.notes}`
-        : formData.notes;
-
-      const bookingData = {
+      const orderPayload = {
         ...formData,
-        notes: finalNotes,
-        user_id: user?.id
+        user_id: user?.id,
+        coupon_code: couponApplied?.code || null,
+        add_on_ids: selectedAddOns
       };
 
-      await createBooking(bookingData);
+      const orderRes = await createPaymentOrder(orderPayload);
+      const { order_id, amount, key_id, booking_details } = orderRes.data;
 
-      setSuccess(true);
-      // Reset Form
-      setFormData({
-        customer_name: user?.name || '',
-        customer_email: user?.email || '',
-        customer_phone: '',
-        service_id: '',
-        booking_date: '',
-        booking_time: '',
-        notes: ''
-      });
-      setSelectedAddOns([]); // Reset add-ons
+      const options = {
+        key: key_id,
+        amount: amount * 100,
+        currency: 'INR',
+        name: 'Flawless By Drashti',
+        image: '/Gallery/logo.jpg',
+        description: `50% Advance for ${booking_details.service_name}`,
+        order_id: order_id,
+        handler: async (response) => {
+          try {
+            const addOnNames = addOnServices.filter(s => selectedAddOns.includes(s.id)).map(s => s.name);
+            const verifyData = {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              ...formData,
+              user_id: user?.id,
+              coupon_code: couponApplied?.code || null,
+              total_amount: booking_details.total_amount,
+              discount_amount: booking_details.discount_amount,
+              advance_amount: booking_details.advance_amount,
+              remaining_amount: booking_details.remaining_amount,
+              add_on_names: addOnNames
+            };
+            const verifyRes = await verifyPayment(verifyData);
+            const bookingData = {
+              id: verifyRes.data?.booking?.id,
+              service_name: booking_details.service_name,
+              customer_name: formData.customer_name,
+              customer_email: formData.customer_email,
+              customer_phone: formData.customer_phone,
+              date: formData.booking_date,
+              time: formData.booking_time,
+              total_amount: booking_details.total_amount,
+              discount_amount: booking_details.discount_amount,
+              advance_amount: booking_details.advance_amount,
+              remaining_amount: booking_details.remaining_amount,
+              coupon_code: couponApplied?.code || null,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              payment_status: 'advance_paid',
+              status: 'pending'
+            };
+            setLastBooking(bookingData);
+            setSuccess(true);
+            setFormData({ customer_name: user?.name || '', customer_email: user?.email || '', customer_phone: '', service_id: '', booking_date: '', booking_time: '', notes: '' });
+            setSelectedAddOns([]); setCouponApplied(null); setCouponCode('');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setTimeout(() => setSuccess(false), 30000);
+          } catch (err) {
+            console.error('Verify error:', err);
+            setError('Payment received but booking failed. Please contact support.');
+          }
+          setLoading(false);
+        },
+        prefill: { name: formData.customer_name, email: formData.customer_email, contact: formData.customer_phone },
+        theme: { color: '#1c1917' },
+        modal: { ondismiss: () => { setLoading(false); } }
+      };
 
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      setTimeout(() => setSuccess(false), 8000);
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', (resp) => { setError(`Payment failed: ${resp.error.description}`); setLoading(false); });
+      rzp.open();
     } catch (error) {
       console.error('Booking error:', error);
       setError(error.response?.data?.message || 'Failed to create booking. Please try again.');
-    } finally {
       setLoading(false);
     }
   };
@@ -237,69 +293,93 @@ const BookingPage = () => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-stone-950 font-sans text-white pt-40 pb-20 px-6 selection:bg-white selection:text-black py-20">
+    <div className={`min-h-screen font-sans pt-40 pb-20 px-6 py-20 transition-colors duration-300 ${isDark ? 'bg-stone-950 text-white selection:bg-white/20' : 'bg-gray-50 text-gray-900 selection:bg-gray-900 selection:text-white'}`}>
+      <Toaster position="top-center" toastOptions={{ style: { borderRadius: '12px', fontSize: '14px', fontWeight: '500' } }} />
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
 
         {/* Header */}
         <div className="text-center mb-16 animate-fadeInUp">
-          <div className="inline-block py-1 px-4 border border-white/10 rounded-full bg-white/5 backdrop-blur-sm mb-6">
-            <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-stone-400">
+          <div className={`inline-block py-1 px-4 border rounded-full mb-6 ${isDark ? 'border-white/10 bg-stone-900' : 'border-gray-200 bg-white'}`}>
+            <span className={`text-[10px] font-bold tracking-[0.3em] uppercase ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
               Online Reservations
             </span>
           </div>
-          <h1 className="text-4xl md:text-6xl font-light text-white mb-6">
-            Secure Your <span className="font-semibold text-stone-300">Appointment</span>
+          <h1 className={`text-4xl md:text-6xl font-light mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Secure Your <span className={`font-semibold ${isDark ? 'text-stone-400' : 'text-gray-600'}`}>Appointment</span>
           </h1>
-          <p className="text-stone-400 max-w-xl mx-auto font-light leading-relaxed">
+          <p className={`max-w-xl mx-auto font-light leading-relaxed ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
             Select your preferred treatment and time. Our team will ensure everything is perfect for your arrival.
           </p>
         </div>
 
         {/* Success Message */}
         {success && (
-          <div className="mb-8 bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-8 flex items-start gap-4 shadow-2xl animate-fadeInUp">
-            <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0 border border-emerald-500/50">
-              <CheckCircle className="w-5 h-5 text-emerald-400" />
+          <div className="mb-8 bg-emerald-50 border border-emerald-200 rounded-xl p-8 shadow-lg animate-fadeInUp">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0 border border-emerald-300">
+                <CheckCircle className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-light text-emerald-800 mb-2 tracking-wide">Payment Successful & Booking Confirmed!</h3>
+                <p className="text-emerald-600 font-light text-sm leading-relaxed">
+                  Your 50% advance has been received. The remaining balance is payable at the salon after your service.
+                </p>
+                {lastBooking?.razorpay_payment_id && (
+                  <p className="text-emerald-700 text-xs mt-1 font-mono">Payment ID: {lastBooking.razorpay_payment_id}</p>
+                )}
+              </div>
             </div>
-            <div>
-              <h3 className="text-xl font-light text-emerald-200 mb-2 tracking-wide">Reservation Received</h3>
-              <p className="text-emerald-400/80 font-light text-sm leading-relaxed">
-                Your request is being processed. You can now view this booking in your <strong>Profile</strong>.
-              </p>
+            <div className="flex flex-wrap gap-3 mt-6 pl-14">
+              {lastBooking && (
+                <button
+                  type="button"
+                  onClick={() => generateReceipt(lastBooking)}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-emerald-700 transition-all"
+                >
+                  <FileDown className="w-3.5 h-3.5" /> Download Receipt
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => navigate('/profile')}
+                className="flex items-center gap-2 px-6 py-2.5 border border-emerald-300 text-emerald-700 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-emerald-100 transition-all"
+              >
+                View Booking History
+              </button>
             </div>
           </div>
         )}
 
         {/* Error Message */}
         {error && (
-          <div className="mb-8 bg-red-950/30 border border-red-500/30 rounded-xl p-6 text-red-300 shadow-2xl animate-fadeInUp text-sm font-light flex items-center gap-3">
+          <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-6 text-red-600 shadow-lg animate-fadeInUp text-sm font-light flex items-center gap-3">
             <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
             {error}
           </div>
         )}
 
         {/* Booking Form */}
-        <div className="bg-stone-900 border border-white/5 rounded-2xl shadow-2xl overflow-hidden animate-fadeInUp" style={{ animationDelay: '0.1s' }}>
+        <div className={`border rounded-2xl shadow-xl overflow-hidden animate-fadeInUp transition-colors ${isDark ? 'bg-stone-900 border-white/10' : 'bg-white border-gray-200'}`} style={{ animationDelay: '0.1s' }}>
           <form onSubmit={handleSubmit} className="p-8 md:p-12">
 
             {/* Personal Information */}
             <div className="space-y-8">
-              <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                <User className="w-5 h-5 text-stone-400" />
-                <h2 className="text-xl font-light tracking-wide text-white">Client Details</h2>
+              <div className={`flex items-center gap-3 border-b pb-4 ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+                <User className={`w-5 h-5 ${isDark ? 'text-stone-400' : 'text-gray-500'}`} />
+                <h2 className={`text-xl font-light tracking-wide ${isDark ? 'text-white' : 'text-gray-900'}`}>Client Details</h2>
               </div>
 
               <div className="grid gap-6">
                 <div>
-                  <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-2 ml-1">
-                    Full Name <span className="text-white">*</span>
+                  <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ml-1 ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
+                    Full Name <span className={isDark ? 'text-white' : 'text-gray-900'}>*</span>
                   </label>
                   <input
                     type="text"
                     name="customer_name"
                     value={formData.customer_name}
                     onChange={handleChange}
-                    className="w-full px-4 py-4 bg-stone-950 border border-white/10 rounded-xl focus:border-white/40 focus:outline-none text-white placeholder-stone-700 transition-all text-sm tracking-wide"
+                    className={`w-full px-4 py-4 border rounded-xl focus:outline-none placeholder-gray-400 transition-all text-sm tracking-wide ${isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400'}`}
                     placeholder="ENTER YOUR NAME"
                     required
                   />
@@ -307,17 +387,17 @@ const BookingPage = () => {
 
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-2 ml-1">
-                      Email Address <span className="text-white">*</span>
+                    <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ml-1 ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
+                      Email Address <span className={isDark ? 'text-white' : 'text-gray-900'}>*</span>
                     </label>
                     <div className="relative group">
-                      <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-stone-600 w-4 h-4 group-focus-within:text-white transition-colors" />
+                      <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 group-focus-within:text-gray-900 dark:group-focus-within:text-white transition-colors" />
                       <input
                         type="email"
                         name="customer_email"
                         value={formData.customer_email}
                         onChange={handleChange}
-                        className="w-full pl-12 pr-4 py-4 bg-stone-950 border border-white/10 rounded-xl focus:border-white/40 focus:outline-none text-white placeholder-stone-700 transition-all text-sm tracking-wide"
+                        className={`w-full pl-12 pr-4 py-4 border rounded-xl focus:outline-none placeholder-gray-400 transition-all text-sm tracking-wide ${isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400'}`}
                         placeholder="email@example.com"
                         required
                       />
@@ -325,17 +405,17 @@ const BookingPage = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-2 ml-1">
-                      Phone Number <span className="text-white">*</span>
+                    <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ml-1 ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
+                      Phone Number <span className={isDark ? 'text-white' : 'text-gray-900'}>*</span>
                     </label>
                     <div className="relative group">
-                      <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 text-stone-600 w-4 h-4 group-focus-within:text-white transition-colors" />
+                      <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 group-focus-within:text-gray-900 dark:group-focus-within:text-white transition-colors" />
                       <input
                         type="tel"
                         name="customer_phone"
                         value={formData.customer_phone}
                         onChange={handleChange}
-                        className="w-full pl-12 pr-4 py-4 bg-stone-950 border border-white/10 rounded-xl focus:border-white/40 focus:outline-none text-white placeholder-stone-700 transition-all text-sm tracking-wide"
+                        className={`w-full pl-12 pr-4 py-4 border rounded-xl focus:outline-none placeholder-gray-400 transition-all text-sm tracking-wide ${isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400'}`}
                         placeholder="9876543210"
                         pattern="[0-9]{10}"
                         required
@@ -347,23 +427,23 @@ const BookingPage = () => {
             </div>
 
             {/* Service Selection */}
-            <div className="space-y-8 mt-12 pt-12 border-t border-white/5">
-              <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                <Sparkles className="w-5 h-5 text-stone-400" />
-                <h2 className="text-xl font-light tracking-wide text-white">Treatment Selection</h2>
+            <div className={`space-y-8 mt-12 pt-12 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+              <div className={`flex items-center gap-3 border-b pb-4 ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+                <Sparkles className={`w-5 h-5 ${isDark ? 'text-stone-400' : 'text-gray-500'}`} />
+                <h2 className={`text-xl font-light tracking-wide ${isDark ? 'text-white' : 'text-gray-900'}`}>Treatment Selection</h2>
               </div>
 
               {/* MAIN SERVICE DROPDOWN */}
               <div>
-                <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-2 ml-1">
-                  Choose Main Service <span className="text-white">*</span>
+                <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ml-1 ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
+                  Choose Main Service <span className={isDark ? 'text-white' : 'text-gray-900'}>*</span>
                 </label>
                 <div className="relative">
                   <select
                     name="service_id"
                     value={formData.service_id}
                     onChange={handleChange}
-                    className="w-full px-4 py-4 bg-stone-950 border border-white/10 rounded-xl focus:border-white/40 focus:outline-none text-white appearance-none cursor-pointer text-sm tracking-wide"
+                    className={`w-full px-4 py-4 border rounded-xl focus:outline-none appearance-none cursor-pointer text-sm tracking-wide ${isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400'}`}
                     required
                   >
                     <option value="">SELECT A TREATMENT</option>
@@ -374,31 +454,31 @@ const BookingPage = () => {
                     ))}
                   </select>
                   <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                    <svg className="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                   </div>
                 </div>
               </div>
 
               {/* SELECTED MAIN SERVICE INFO */}
               {selectedMainService && (
-                <div className="bg-stone-800/50 p-6 rounded-xl border border-white/5 animate-fadeInUp flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className={`p-6 rounded-xl border animate-fadeInUp flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${isDark ? 'bg-stone-800 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
                   <div>
-                    <h3 className="text-lg font-light text-white mb-1">{selectedMainService.name}</h3>
-                    <p className="text-stone-500 text-xs font-light tracking-wide">{selectedMainService.description}</p>
+                    <h3 className={`text-lg font-light mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedMainService.name}</h3>
+                    <p className={`text-xs font-light tracking-wide ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>{selectedMainService.description}</p>
                   </div>
-                  <div className="flex items-center gap-6 border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-6 w-full md:w-auto mt-2 md:mt-0">
+                  <div className={`flex items-center gap-6 border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-6 w-full md:w-auto mt-2 md:mt-0 ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-stone-400" />
-                      <span className="text-sm font-bold text-stone-300">{selectedMainService.duration} MIN</span>
+                      <Clock className={`w-4 h-4 ${isDark ? 'text-stone-400' : 'text-gray-500'}`} />
+                      <span className={`text-sm font-bold ${isDark ? 'text-stone-300' : 'text-gray-700'}`}>{selectedMainService.duration} MIN</span>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* ADD-ONS SECTION (Only shows if Main Service is selected and Add-ons exist) */}
+              {/* ADD-ONS SECTION */}
               {selectedMainService && addOnServices.length > 0 && (
                 <div className="animate-fadeIn mt-6">
-                  <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-4 ml-1 flex items-center gap-2">
+                  <label className={`block text-xs font-bold uppercase tracking-widest mb-4 ml-1 flex items-center gap-2 ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
                     <Plus className="w-3 h-3" /> Enhance Your Experience (Optional)
                   </label>
 
@@ -410,25 +490,25 @@ const BookingPage = () => {
                         className={`
                           cursor-pointer relative p-4 rounded-xl border transition-all duration-300 flex items-center justify-between
                           ${selectedAddOns.includes(extra.id)
-                            ? 'bg-stone-800 border-white/40 shadow-lg'
-                            : 'bg-stone-950 border-white/10 hover:border-white/20 hover:bg-stone-900'}
+                            ? isDark ? 'bg-stone-700 border-white/20 shadow-md' : 'bg-gray-100 border-gray-400 shadow-md'
+                            : isDark ? 'bg-stone-800 border-white/10 hover:border-white/20' : 'bg-gray-50 border-gray-200 hover:border-gray-300 hover:bg-white'}
                         `}
                       >
                         <div className="flex items-center gap-4">
                           <div className={`
                             w-5 h-5 rounded-full border flex items-center justify-center transition-colors
-                            ${selectedAddOns.includes(extra.id) ? 'bg-white border-white' : 'border-stone-600'}
+                            ${selectedAddOns.includes(extra.id) ? (isDark ? 'bg-white border-white' : 'bg-gray-900 border-gray-900') : (isDark ? 'border-stone-500' : 'border-gray-300')}
                           `}>
-                            {selectedAddOns.includes(extra.id) && <Check className="w-3 h-3 text-black" />}
+                            {selectedAddOns.includes(extra.id) && <Check className={`w-3 h-3 ${isDark ? 'text-black' : 'text-white'}`} />}
                           </div>
                           <div>
-                            <p className={`text-sm font-medium ${selectedAddOns.includes(extra.id) ? 'text-white' : 'text-stone-300'}`}>
+                            <p className={`text-sm font-medium ${selectedAddOns.includes(extra.id) ? (isDark ? 'text-white' : 'text-gray-900') : (isDark ? 'text-stone-200' : 'text-gray-700')}`}>
                               {extra.name}
                             </p>
-                            <p className="text-xs text-stone-500 mt-0.5 font-light">{extra.description}</p>
+                            <p className={`text-xs mt-0.5 font-light ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>{extra.description}</p>
                           </div>
                         </div>
-                        <span className="text-sm font-bold text-stone-300">₹{extra.price}</span>
+                        <span className={`text-sm font-bold ${isDark ? 'text-stone-300' : 'text-gray-700'}`}>₹{extra.price}</span>
                       </div>
                     ))}
                   </div>
@@ -438,26 +518,26 @@ const BookingPage = () => {
               {/* DATE & TIME SELECTION */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-2 ml-1">
-                    Preferred Date <span className="text-white">*</span>
+                  <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ml-1 ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
+                    Preferred Date <span className={isDark ? 'text-white' : 'text-gray-900'}>*</span>
                   </label>
                   <div className="relative group">
-                    <Calendar className="absolute left-4 top-1/2 transform -translate-y-1/2 text-stone-600 w-4 h-4 group-focus-within:text-white transition-colors pointer-events-none" />
+                    <Calendar className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 group-focus-within:text-gray-900 dark:group-focus-within:text-white transition-colors pointer-events-none" />
                     <input
                       type="date"
                       name="booking_date"
                       value={formData.booking_date}
                       onChange={handleChange}
                       min={todayStr}
-                      className="w-full pl-12 pr-4 py-4 bg-stone-950 border border-white/10 rounded-xl focus:border-white/40 focus:outline-none text-white placeholder-stone-700 transition-all text-sm tracking-wide uppercase [color-scheme:dark]"
+                      className={`w-full pl-12 pr-4 py-4 border rounded-xl focus:outline-none placeholder-gray-400 transition-all text-sm tracking-wide uppercase ${isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400'}`}
                       required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-2 ml-1">
-                    Preferred Time <span className="text-white">*</span>
+                  <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ml-1 ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
+                    Preferred Time <span className={isDark ? 'text-white' : 'text-gray-900'}>*</span>
                   </label>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                     {timeSlots.map((time) => {
@@ -472,10 +552,10 @@ const BookingPage = () => {
                           className={`
                             py-3 text-sm font-medium rounded-lg border transition-all duration-200
                             ${isBlocked
-                              ? 'border-stone-800 text-stone-600 bg-stone-900/50 cursor-not-allowed decoration-stone-600'
+                              ? isDark ? 'border-white/5 text-stone-600 bg-stone-800/50 cursor-not-allowed' : 'border-gray-200 text-gray-300 bg-gray-100 cursor-not-allowed'
                               : isSelected
-                                ? 'bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-105'
-                                : 'bg-stone-950 border-white/10 text-stone-400 hover:border-white/50 hover:text-white hover:bg-stone-900'
+                                ? isDark ? 'bg-white text-black border-white shadow-lg scale-105' : 'bg-gray-900 text-white border-gray-900 shadow-lg scale-105'
+                                : isDark ? 'bg-stone-800 border-white/10 text-stone-300 hover:border-white/20 hover:text-white' : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-400 hover:text-gray-900 hover:bg-white'
                             }
                           `}
                         >
@@ -488,104 +568,131 @@ const BookingPage = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-2 ml-1">
+                <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ml-1 ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
                   Special Requests (Optional)
                 </label>
                 <div className="relative group">
-                  <MessageSquare className="absolute left-4 top-4 text-stone-600 w-4 h-4 group-focus-within:text-white transition-colors" />
+                  <MessageSquare className={`absolute left-4 top-4 w-4 h-4 ${isDark ? 'text-stone-500' : 'text-gray-400'} group-focus-within:text-gray-900 transition-colors`} />
                   <textarea
                     name="notes"
                     value={formData.notes}
                     onChange={handleChange}
                     rows="4"
-                    className="w-full pl-12 pr-4 py-4 bg-stone-950 border border-white/10 rounded-xl focus:border-white/40 focus:outline-none text-white placeholder-stone-700 transition-all resize-none text-sm leading-relaxed"
+                    className={`w-full pl-12 pr-4 py-4 border rounded-xl focus:outline-none placeholder-gray-400 transition-all resize-none text-sm leading-relaxed ${isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400'}`}
                     placeholder="Any allergies or specific requirements?"
                   />
                 </div>
               </div>
-            </div>
 
-            {/* TOTAL PRICE BAR & SUBMIT */}
-            <div className="hidden md:flex mt-12 pt-8 border-t border-white/5 justify-between items-center gap-6">
-              <div className="text-left">
-                <p className="text-stone-500 text-xs font-bold uppercase tracking-widest mb-1">Total Payable</p>
-                <div className="flex items-center gap-2">
-                  <IndianRupee className="w-6 h-6 text-white" />
-                  <span className="text-4xl font-light text-white tracking-tight">
-                    {calculateTotal() > 0 ? calculateTotal() : '---'}
-                  </span>
+              {/* COUPON SECTION */}
+              {selectedMainService && (
+                <div className="mt-6 animate-fadeIn">
+                  {couponEligible && !couponApplied && (
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 mb-4 flex items-center gap-3 cursor-pointer" onClick={() => { setShowCoupon(true); setCouponCode(couponEligible.code); }}>
+                      <Gift className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-amber-800"><Gift className="w-4 h-4 inline mr-1" /> New here? Use code <span className="font-mono bg-amber-100 px-2 py-0.5 rounded text-amber-900">{couponEligible.code}</span> for {couponEligible.discount_percent}% off!</p>
+                        <p className="text-xs text-amber-600 mt-0.5">Tap to apply automatically</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 cursor-pointer mb-3" onClick={() => setShowCoupon(!showCoupon)}>
+                    <Tag className={`w-4 h-4 ${isDark ? 'text-stone-400' : 'text-gray-500'}`} />
+                    <span className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>Have a Coupon Code?</span>
+                  </div>
+
+                  {showCoupon && (
+                    <div className="flex gap-3 animate-fadeInUp">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        placeholder="ENTER COUPON CODE"
+                        disabled={!!couponApplied}
+                        className={`flex-1 px-4 py-3 border rounded-xl focus:outline-none text-sm tracking-widest uppercase disabled:opacity-50 ${isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400'}`}
+                      />
+                      {couponApplied ? (
+                        <button type="button" onClick={removeCoupon} className="px-6 py-3 border border-red-300 text-red-600 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-red-50 transition-all">Remove</button>
+                      ) : (
+                        <button type="button" onClick={handleApplyCoupon} disabled={couponLoading} className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-50 ${isDark ? 'bg-white text-black hover:bg-gray-200' : 'bg-gray-900 text-white hover:bg-gray-800'}`}>{couponLoading ? '...' : 'Apply'}</button>
+                      )}
+                    </div>
+                  )}
+                  {couponApplied && <p className="text-amber-500 text-xs mt-2 font-semibold flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {couponApplied.discount_percent}% discount applied!</p>}
+                  {couponError && <p className="text-red-500 text-xs mt-2">{couponError}</p>}
                 </div>
-                {selectedAddOns.length > 0 && (
-                  <p className="text-stone-500 text-xs mt-2">Includes {selectedAddOns.length} extra(s)</p>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-10 bg-white text-black py-5 rounded-xl hover:bg-stone-200 transition-all duration-300 font-bold text-xs uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-black border-t-transparent"></div>
-                    Securing Slot...
-                  </>
-                ) : (
-                  <>
-                    Confirm Reservation
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
+              )}
             </div>
 
-            {/* MOBILE STICKY FOOTER (Visible only on small screens) */}
-            <div className="md:hidden fixed bottom-6 left-6 right-6 z-50">
-              <div className="bg-stone-900/95 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl flex items-center justify-between gap-4 ring-1 ring-black/50">
-                <div>
-                  <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mb-1">Total</p>
-                  <div className="flex items-center gap-1">
-                    <IndianRupee className="w-4 h-4 text-white" />
-                    <span className="text-2xl font-bold text-white">
-                      {calculateTotal() > 0 ? calculateTotal() : '0'}
-                    </span>
+            {/* PAYMENT BREAKDOWN & SUBMIT */}
+            <div className={`hidden md:block mt-12 pt-8 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+              {calculateTotal() > 0 && (
+                <div className={`rounded-xl border p-6 mb-6 ${isDark ? 'bg-stone-800 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+                  <p className={`text-xs font-bold uppercase tracking-widest mb-4 ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>Payment Summary</p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between"><span className={isDark ? 'text-stone-400' : 'text-gray-500'}>Service Total</span><span className={isDark ? 'text-white' : 'text-gray-900'}>₹{calculateTotal()}</span></div>
+                    {selectedAddOns.length > 0 && <div className={`flex justify-between text-xs ${isDark ? 'text-stone-500' : 'text-gray-400'}`}><span>Includes {selectedAddOns.length} extra(s)</span></div>}
+                    {couponApplied && <div className="flex justify-between text-amber-500 font-medium"><span>Discount ({couponApplied.code})</span><span>-₹{getDiscount()}</span></div>}
+                    <div className={`border-t border-dashed pt-2 flex justify-between font-semibold ${isDark ? 'border-white/20' : 'border-gray-300'}`}><span className={isDark ? 'text-stone-300' : 'text-gray-700'}>Final Total</span><span className={isDark ? 'text-white' : 'text-gray-900'}>₹{getFinalTotal()}</span></div>
+                    <div className={`border-t pt-3 mt-3 space-y-1 ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+                      <div className="flex justify-between text-emerald-500"><span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" /> Pay Now (50%)</span><span className="font-bold">₹{getAdvance()}</span></div>
+                      <div className="flex justify-between text-amber-500"><span className="flex items-center gap-1.5"><Timer className="w-3.5 h-3.5" /> Pay After Service</span><span className="font-bold">₹{getRemaining()}</span></div>
+                    </div>
                   </div>
                 </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 bg-white text-black py-4 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
-                >
-                  {loading ? 'Processing...' : 'Confirm'} <ArrowRight className="w-3 h-3" />
+              )}
+              <div className="flex justify-end">
+                <button type="submit" disabled={loading} className={`px-10 py-5 rounded-xl transition-all duration-300 font-bold text-xs uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 ${isDark ? 'bg-white text-black hover:bg-gray-200' : 'bg-gray-900 text-white hover:bg-gray-800'}`}>
+                  {loading ? (<><div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>Processing Payment...</>) : (<>Pay ₹{getAdvance() > 0 ? getAdvance() : '---'} & Confirm<ArrowRight className="w-4 h-4" /></>)}
                 </button>
+              </div>
+            </div>
+
+            {/* MOBILE STICKY FOOTER */}
+            <div className="md:hidden fixed bottom-6 left-6 right-6 z-50">
+              <div className={`backdrop-blur-xl border p-5 rounded-2xl shadow-2xl ${isDark ? 'bg-stone-900/95 border-white/10' : 'bg-white/95 border-gray-200'}`}>
+                {calculateTotal() > 0 && couponApplied && <p className="text-amber-500 text-[10px] font-bold mb-1 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {couponApplied.discount_percent}% OFF Applied</p>}
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>Pay Now (50%)</p>
+                    <div className="flex items-center gap-1">
+                      <IndianRupee className={`w-4 h-4 ${isDark ? 'text-white' : 'text-gray-900'}`} />
+                      <span className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{getAdvance() > 0 ? getAdvance() : '0'}</span>
+                    </div>
+                    {getRemaining() > 0 && <p className="text-[10px] text-amber-600">+ ₹{getRemaining()} after service</p>}
+                  </div>
+                  <button type="submit" disabled={loading} className={`flex-1 py-4 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 ${isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'}`}>
+                    {loading ? 'Processing...' : 'Pay & Book'} <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
             </div>
           </form>
         </div>
 
         {/* Info Section */}
-        <div className="mt-12 border border-white/5 rounded-xl p-8 bg-stone-900/50 backdrop-blur-sm animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
-          <h3 className="font-bold text-stone-300 mb-6 text-xs uppercase tracking-widest flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-white" />
+        <div className={`mt-12 border rounded-xl p-8 shadow-sm animate-fadeInUp ${isDark ? 'bg-stone-900 border-white/10' : 'bg-white border-gray-200'}`} style={{ animationDelay: '0.2s' }}>
+          <h3 className={`font-bold mb-6 text-xs uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-stone-300' : 'text-gray-700'}`}>
+            <CheckCircle className={`w-4 h-4 ${isDark ? 'text-white' : 'text-gray-900'}`} />
             Booking Policy
           </h3>
-          <div className="grid md:grid-cols-2 gap-4 text-stone-500 text-xs font-light tracking-wide leading-relaxed">
+          <div className={`grid md:grid-cols-2 gap-4 text-xs font-light tracking-wide leading-relaxed ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
             <div className="flex items-start gap-3">
-              <span className="text-white mt-0.5">•</span>
-              <span>All appointments are subject to availability and confirmation by our concierge team.</span>
+              <span className={`mt-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>•</span>
+              <span>A <strong>50% advance payment</strong> is required to confirm your booking. The remaining balance is due after service completion.</span>
             </div>
             <div className="flex items-start gap-3">
-              <span className="text-white mt-0.5">•</span>
+              <span className={`mt-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>•</span>
               <span>Please arrive 10 minutes prior to your scheduled time to complete any necessary consultation forms.</span>
             </div>
             <div className="flex items-start gap-3">
-              <span className="text-white mt-0.5">•</span>
-              <span>Cancellations must be made at least 24 hours in advance to avoid a cancellation fee.</span>
+              <span className={`mt-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>•</span>
+              <span>Cancellations must be made at least 24 hours in advance. Advance payments are non-refundable.</span>
             </div>
             <div className="flex items-start gap-3">
-              <span className="text-white mt-0.5">•</span>
-              <span>Confirmation emails are sent immediately upon successful booking request.</span>
+              <span className={`mt-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>•</span>
+              <span>New customers can use coupon code <strong>WELCOME5</strong> for a 5% discount on their first booking!</span>
             </div>
           </div>
         </div>

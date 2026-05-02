@@ -87,6 +87,20 @@ const sendBookingConfirmation = async (booking, serviceName) => {
   const targetEmail = booking.customer_email || process.env.EMAIL_USER;
   const refNo = `FLAW-${booking.id}`;
 
+  // Build payment breakdown HTML
+  const hasPayment = booking.advance_amount > 0 || booking.remaining_amount > 0;
+  const hasDiscount = booking.discount_amount && parseFloat(booking.discount_amount) > 0;
+  const finalTotal = hasDiscount ? (parseFloat(booking.total_amount) - parseFloat(booking.discount_amount)) : parseFloat(booking.total_amount);
+
+  const paymentSection = hasPayment ? `
+    ${hasDiscount ? `<div style="${styles.detailRow} color: #059669;"><strong>Discount (${booking.coupon_code}):</strong> -₹${booking.discount_amount}</div>` : ''}
+    ${hasDiscount ? `<div style="${styles.detailRow}"><strong>Final Amount:</strong> ₹${finalTotal}</div>` : ''}
+    <div style="border-top: 2px dashed #e5e7eb; margin: 15px 0; padding-top: 12px;">
+      <div style="${styles.detailRow} color: #059669;"><strong>✅ Advance Paid (50%):</strong> ₹${booking.advance_amount}</div>
+      <div style="${styles.detailRow} color: #d97706;"><strong>🕐 Balance Due (After Service):</strong> ₹${booking.remaining_amount}</div>
+    </div>
+  ` : `<div style="font-size: 16px; color: #059669; padding-top: 5px; font-weight: bold;"><strong>Total Amount:</strong> ₹${booking.total_amount}</div>`;
+
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
@@ -103,9 +117,11 @@ const sendBookingConfirmation = async (booking, serviceName) => {
           <div style="${styles.detailRow}"><strong>Service:</strong> ${serviceName}</div>
           <div style="${styles.detailRow}"><strong>Date:</strong> ${new Date(booking.booking_date).toDateString()}</div>
           <div style="${styles.detailRow}"><strong>Time:</strong> ${booking.booking_time}</div>
-          <div style="font-size: 16px; color: #059669; padding-top: 5px; font-weight: bold;"><strong>Total Amount:</strong> ₹${booking.total_amount}</div>
+          <div style="${styles.detailRow}"><strong>Total Amount:</strong> ₹${booking.total_amount}</div>
+          ${paymentSection}
         </div>
         
+        ${hasPayment ? `<p style="${styles.text}"><strong>Note:</strong> Your advance of ₹${booking.advance_amount} has been received. The remaining balance of ₹${booking.remaining_amount} is payable at the salon after your service is completed.</p>` : ''}
         <p style="${styles.text}">Please arrive 5 minutes early. We can't wait to see you!</p>
         <p style="${styles.text}">Warm regards,<br><strong>Team Flawless</strong></p>
       </div>
@@ -179,6 +195,18 @@ const sendBookingRejection = async (booking, serviceName, reason = '') => {
 const sendBookingNotification = async (booking, serviceName) => {
   const refNo = `FLAW-${booking.id}`;
 
+  // Build payment info for notification
+  const hasPayment = booking.advance_amount > 0 || booking.remaining_amount > 0;
+  const hasDiscount = booking.discount_amount && parseFloat(booking.discount_amount) > 0;
+
+  const paymentDetails = hasPayment ? `
+    ${hasDiscount ? `<div style="${styles.detailRow} color: #059669;"><strong>Discount (${booking.coupon_code}):</strong> -₹${booking.discount_amount}</div>` : ''}
+    <div style="border-top: 2px dashed #e5e7eb; margin: 10px 0; padding-top: 10px;">
+      <div style="${styles.detailRow} color: #059669;"><strong>✅ Advance Paid (50%):</strong> ₹${booking.advance_amount}</div>
+      <div style="${styles.detailRow} color: #d97706;"><strong>🕐 Pay After Service:</strong> ₹${booking.remaining_amount}</div>
+    </div>
+  ` : '';
+
   const htmlContent = `
     <div style="${styles.container}">
       <div style="${styles.header}">
@@ -188,14 +216,15 @@ const sendBookingNotification = async (booking, serviceName) => {
       <div style="${styles.body}">
         <h2 style="${styles.h2} color: #d97706;">Request Received ⏳</h2>
         <p style="${styles.text}">Dear <strong>${booking.customer_name}</strong>,</p>
-        <p style="${styles.text}">We have received your booking request! It is currently <strong>Pending Approval</strong>.</p>
+        <p style="${styles.text}">We have received your booking request! ${hasPayment ? 'Your advance payment has been recorded.' : ''} It is currently <strong>Pending Approval</strong>.</p>
         
         <div style="${styles.detailBox} border-left: 4px solid #d97706;">
           <div style="${styles.detailRow}"><strong>Reference No:</strong> ${refNo}</div>
           <div style="${styles.detailRow}"><strong>Service:</strong> ${serviceName}</div>
           <div style="${styles.detailRow}"><strong>Requested Date:</strong> ${new Date(booking.booking_date).toDateString()}</div>
           <div style="${styles.detailRow}"><strong>Requested Time:</strong> ${booking.booking_time}</div>
-          <div style="${styles.detailRow}"><strong>Est. Amount:</strong> ₹${booking.total_amount}</div>
+          <div style="${styles.detailRow}"><strong>Total Amount:</strong> ₹${booking.total_amount}</div>
+          ${paymentDetails}
         </div>
         
         <p style="${styles.text}">A preliminary receipt is attached. You will receive a final confirmation email shortly.</p>
@@ -321,11 +350,15 @@ const sendWelcomeEmail = async (email, name) => {
     </div>
   `;
 
-  await sendEmailViaBrevo(
-    email,
-    'Welcome to Flawless Salon! 🎉',
-    htmlContent
-  );
+  try {
+    await sendEmailViaBrevo(
+      email,
+      'Welcome to Flawless Salon! 🎉',
+      htmlContent
+    );
+  } catch (err) {
+    console.error('⚠️ Welcome email failed (non-fatal):', err.message);
+  }
 }; // ✅ Closed sendWelcomeEmail properly
 
 // 6. LAUNCH NOTIFICATION EMAIL

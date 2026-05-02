@@ -263,6 +263,20 @@ const Dashboard = () => {
     }
   };
 
+  const handlePaymentStatusUpdate = async (bookingId, payment_status) => {
+    setProcessingId(bookingId);
+    try {
+      await axios.put(`${API_BASE_URL}/bookings/${bookingId}/payment-status`,
+        { payment_status }, getAuthHeader());
+      toast.success(`Payment marked as ${payment_status}!`);
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to update payment status.');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const executeDeleteBooking = async () => {
     if (!bookingToDelete) return;
     setIsDeleting(true);
@@ -634,6 +648,15 @@ const Dashboard = () => {
                         </div>
                         <div className="text-right">
                           <span className="block text-sm font-light text-white">₹{booking.total_amount}</span>
+                          {booking.advance_amount > 0 && (
+                            <div className="text-[9px] mt-1 space-y-0.5">
+                              <p className="text-green-400">Paid: ₹{booking.advance_amount}</p>
+                              {booking.remaining_amount > 0 && <p className="text-amber-400">Due: ₹{booking.remaining_amount}</p>}
+                            </div>
+                          )}
+                          {booking.payment_status && (
+                            <span className={`inline-block mt-1 px-1.5 py-0.5 text-[8px] font-bold uppercase rounded ${booking.payment_status === 'fully_paid' ? 'bg-green-500/20 text-green-400' : booking.payment_status === 'advance_paid' ? 'bg-amber-500/20 text-amber-400' : 'bg-stone-800 text-stone-500'}`}>{booking.payment_status?.replace('_', ' ')}</span>
+                          )}
                         </div>
                       </div>
 
@@ -659,6 +682,11 @@ const Dashboard = () => {
                             <Trash2 size={12} /> Delete
                           </button>
                         )}
+                        {booking.payment_status === 'advance_paid' && booking.status !== 'rejected' && (
+                          <button onClick={() => handlePaymentStatusUpdate(booking.id, 'fully_paid')} className="w-full bg-emerald-900/20 text-emerald-400 border border-emerald-900/30 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-emerald-600 hover:text-white transition flex items-center justify-center gap-1">
+                            <IndianRupee size={12} /> Mark Paid
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))
@@ -676,6 +704,7 @@ const Dashboard = () => {
                       <th className="p-4">Service</th>
                       <th className="p-4">Date & Time</th>
                       <th className="p-4">Amount</th>
+                      <th className="p-4">Payment</th>
                       <th className="p-4">Status</th>
                       <th className="p-4 text-right">Actions</th>
                     </tr>
@@ -689,7 +718,15 @@ const Dashboard = () => {
                             <td className="p-4 text-stone-400 font-mono text-xs">{booking.customer_phone || '-'}</td>
                             <td className="p-4"><span className="text-white">{booking.service_name}</span></td>
                             <td className="p-4"><div className="flex gap-2"><span className="bg-stone-800 px-2 py-1 rounded text-xs">{new Date(booking.booking_date).toLocaleDateString()}</span><span className="text-stone-400">{booking.booking_time}</span></div></td>
-                            <td className="p-4 font-bold text-white">₹{booking.total_amount || booking.price}</td>
+                            <td className="p-4">
+                              <span className="font-bold text-white">₹{booking.total_amount || booking.price}</span>
+                              {booking.discount_amount > 0 && <p className="text-[9px] text-purple-400 mt-0.5">-₹{booking.discount_amount} ({booking.coupon_code})</p>}
+                              {booking.advance_amount > 0 && <p className="text-[9px] text-green-400 mt-0.5">Adv: ₹{booking.advance_amount}</p>}
+                              {booking.remaining_amount > 0 && <p className="text-[9px] text-amber-400">Due: ₹{booking.remaining_amount}</p>}
+                            </td>
+                            <td className="p-4">
+                              <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${booking.payment_status === 'fully_paid' ? 'bg-green-500/10 text-green-400 border-green-500/20' : booking.payment_status === 'advance_paid' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-stone-800 text-stone-500 border-stone-700'}`}>{(booking.payment_status || 'unpaid').replace('_', ' ')}</span>
+                            </td>
                             <td className="p-4"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${getStatusColor(booking.status)}`}>{booking.status}</span></td>
                             <td className="p-4 text-right">
                               <div className="flex justify-end gap-2 items-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -706,6 +743,9 @@ const Dashboard = () => {
                                     )}
                                     {(booking.status === 'rejected' || booking.status === 'completed') && (
                                       <button onClick={() => setBookingToDelete(booking)} className="text-stone-500 hover:text-red-500 hover:bg-red-500/10 p-2 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                    )}
+                                    {booking.payment_status === 'advance_paid' && booking.status !== 'rejected' && (
+                                      <button onClick={() => handlePaymentStatusUpdate(booking.id, 'fully_paid')} className="px-2 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded hover:bg-emerald-500 hover:text-white text-[9px] uppercase font-bold" title="Mark Remaining Paid">₹ Paid</button>
                                     )}
                                   </>
                                 )}

@@ -1,10 +1,13 @@
 import express from 'express';
 import {
     createBooking,
+    createPaymentOrder,
+    verifyPaymentAndBook,
     getAllBookings,
-    getBookedSlots, // ✅ Imported
+    getBookedSlots,
     getUserBookings,
     updateBookingStatus,
+    updatePaymentStatus,
     rescheduleBooking,
     getDashboardStats,
     deleteBooking,
@@ -24,6 +27,12 @@ router.get('/slots', getBookedSlots);
 // Create a booking (Now requires login)
 router.post('/', authenticateToken, createBooking);
 
+// 💳 Razorpay: Create Payment Order (50% advance)
+router.post('/create-order', authenticateToken, createPaymentOrder);
+
+// 💳 Razorpay: Verify Payment & Create Booking
+router.post('/verify-payment', authenticateToken, verifyPaymentAndBook);
+
 
 // --- USER ROUTES (Protected) ---
 // Get bookings for the specific logged-in user
@@ -40,8 +49,11 @@ router.get('/', authenticateToken, authorizeAdmin, getAllBookings);
 // Get dashboard statistics
 router.get('/stats', authenticateToken, authorizeAdmin, getDashboardStats);
 
-// Update booking status (Confirm/Reject)
+// Update booking status (Confirm/Reject/Complete)
 router.put('/:id/status', authenticateToken, authorizeAdmin, updateBookingStatus);
+
+// 💳 Update payment status (Mark Remaining Paid)
+router.put('/:id/payment-status', authenticateToken, authorizeAdmin, updatePaymentStatus);
 
 router.delete('/:id', authenticateToken, authorizeAdmin, deleteBooking);
 

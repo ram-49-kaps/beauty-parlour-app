@@ -32,7 +32,9 @@ export const generateBookingPDF = (booking, serviceName) => {
             .moveDown();
 
         // 3. Booking Details Box
-        doc.rect(50, 180, 510, 220).stroke('#aaaaaa');
+        const hasPaymentInfo = booking.advance_amount > 0 || booking.remaining_amount > 0;
+        const boxHeight = hasPaymentInfo ? 340 : 220;
+        doc.rect(50, 180, 510, boxHeight).stroke('#aaaaaa');
 
         const leftX = 70;
         const rightX = 300;
@@ -61,17 +63,64 @@ export const generateBookingPDF = (booking, serviceName) => {
         doc.font('Helvetica-Bold').text('Time:', leftX, startY + lineHeight * 4);
         doc.font('Helvetica').text(booking.booking_time, rightX, startY + lineHeight * 4);
 
-        // Amount
+        // Total Amount
         doc.font('Helvetica-Bold').text('Total Amount:', leftX, startY + lineHeight * 5);
-        doc.font('Helvetica-Bold').text(`Rs. ${booking.total_amount || 0}`, rightX, startY + lineHeight * 5, { color: '#059669' });
+        doc.font('Helvetica').text(`Rs. ${booking.total_amount || 0}`, rightX, startY + lineHeight * 5);
 
-        // Status
+        let currentLine = 6;
+
+        // Discount (if coupon applied)
+        if (booking.discount_amount && parseFloat(booking.discount_amount) > 0) {
+            doc.fillColor('#059669');
+            doc.font('Helvetica-Bold').text('Discount:', leftX, startY + lineHeight * currentLine);
+            doc.font('Helvetica').text(`- Rs. ${booking.discount_amount} (${booking.coupon_code || 'Coupon'})`, rightX, startY + lineHeight * currentLine);
+            doc.fillColor('#333333');
+            currentLine++;
+
+            // Final Amount
+            const finalAmount = parseFloat(booking.total_amount) - parseFloat(booking.discount_amount);
+            doc.font('Helvetica-Bold').text('Final Amount:', leftX, startY + lineHeight * currentLine);
+            doc.font('Helvetica-Bold').text(`Rs. ${finalAmount}`, rightX, startY + lineHeight * currentLine);
+            currentLine++;
+        }
+
+        // Payment Breakdown (if half-payment)
+        if (hasPaymentInfo) {
+            // Divider line
+            doc.moveTo(leftX, startY + lineHeight * currentLine - 5)
+               .lineTo(500, startY + lineHeight * currentLine - 5)
+               .stroke('#cccccc');
+
+            // Advance Paid
+            doc.fillColor('#059669');
+            doc.font('Helvetica-Bold').text('Advance Paid (50%):', leftX, startY + lineHeight * currentLine);
+            doc.font('Helvetica-Bold').text(`Rs. ${booking.advance_amount} ✓`, rightX, startY + lineHeight * currentLine);
+            currentLine++;
+
+            // Remaining Amount
+            const remainingColor = parseFloat(booking.remaining_amount) > 0 ? '#d97706' : '#059669';
+            doc.fillColor(remainingColor);
+            doc.font('Helvetica-Bold').text('Balance Due (After Service):', leftX, startY + lineHeight * currentLine);
+            doc.font('Helvetica-Bold').text(`Rs. ${booking.remaining_amount}`, rightX, startY + lineHeight * currentLine);
+            currentLine++;
+
+            // Payment Status
+            doc.fillColor('#333333');
+            doc.font('Helvetica-Bold').text('Payment Status:', leftX, startY + lineHeight * currentLine);
+            const paymentStatusColor = booking.payment_status === 'fully_paid' ? '#059669' : '#d97706';
+            const paymentStatusText = booking.payment_status === 'fully_paid' ? 'FULLY PAID' : 'ADVANCE PAID';
+            doc.fillColor(paymentStatusColor);
+            doc.font('Helvetica-Bold').text(paymentStatusText, rightX, startY + lineHeight * currentLine);
+            currentLine++;
+        }
+
+        // Booking Status
         doc.fillColor('#333333');
-        doc.font('Helvetica-Bold').text('Status:', leftX, startY + lineHeight * 6);
+        doc.font('Helvetica-Bold').text('Booking Status:', leftX, startY + lineHeight * currentLine);
 
-        const statusColor = (booking.status.toLowerCase() === 'rejected' || booking.status.toLowerCase() === 'cancelled') ? '#dc2626' : '#059669';
+        const statusColor = (booking.status?.toLowerCase() === 'rejected' || booking.status?.toLowerCase() === 'cancelled') ? '#dc2626' : '#059669';
         doc.fillColor(statusColor);
-        doc.font('Helvetica-Bold').text(booking.status.toUpperCase(), rightX, startY + lineHeight * 6);
+        doc.font('Helvetica-Bold').text((booking.status || 'pending').toUpperCase(), rightX, startY + lineHeight * currentLine);
 
         // 4. Footer
         doc

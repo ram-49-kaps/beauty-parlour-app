@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'; // 👈 Import useEffect, useState
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/Navbar';
 import LoginModal from './components/LoginModal'; // 👈 Import LoginModal
 const Homepage = React.lazy(() => import('./pages/HomePage'));
@@ -25,8 +26,8 @@ const SECRET_ADMIN_URL = "/secure-owner-portal-2026";
 
 // Loading Component
 const LoadingScreen = () => (
-  <div className="min-h-screen flex items-center justify-center bg-stone-950">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+  <div className="min-h-screen flex items-center justify-center bg-white dark:bg-stone-950">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-800 dark:border-white"></div>
   </div>
 );
 
@@ -127,6 +128,7 @@ function App() {
   }
 
   return (
+    <ThemeProvider>
     <AuthProvider>
       <Router>
         <Layout>
@@ -156,6 +158,7 @@ function App() {
         </Layout>
       </Router>
     </AuthProvider>
+    </ThemeProvider>
   );
 }
 

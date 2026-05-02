@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -56,7 +57,19 @@ export default {
       boxShadow: {
         'beauty': '0 10px 40px rgba(217, 70, 239, 0.3)',
         'rose': '0 10px 40px rgba(244, 63, 94, 0.3)',
-      }
+      },
+      animation: {
+        'smooth-zoom': 'smoothZoom 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+      },
+      keyframes: {
+        smoothZoom: {
+          '0%': { transform: 'scale(1)', opacity: '0.9' },
+          '100%': { transform: 'scale(1.08)', opacity: '1' },
+        },
+      },
+      scale: {
+        '108': '1.08',
+      },
     },
   },
   plugins: [],

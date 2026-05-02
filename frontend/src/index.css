@@ -1,3 +1,71 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ===== LIGHT MODE (default) ===== */
+body {
+  background-color: #ffffff;
+  color: #1a1a1a;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ===== DARK MODE ===== */
+.dark body {
+  background-color: #0c0a09;
+  color: #ffffff;
+}
+
+/* Custom scrollbar - Light */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 10px;
+}
+
+/* Custom scrollbar - Dark */
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+  background: #1c1917;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #44403c;
+  border-radius: 10px;
+}
+
+/* Select option styling */
+select option {
+  background-color: #ffffff;
+  color: #1a1a1a;
+}
+.dark select option {
+  background-color: #1c1917;
+  color: #ffffff;
+}
+
+/* Date input fix */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0);
+}
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+/* No scrollbar helper */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Smooth theme transition for common elements - EXCLUDE elements with explicit transitions */
+.dark *:not([class*="transition-"]) {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
+}

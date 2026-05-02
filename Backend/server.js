@@ -19,6 +19,7 @@ import serviceRoutes from './routes/serviceRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import chatRoutes from './routes/chatRoutes.js'; // 👈 Your new Chat Route
+import couponRoutes from './routes/couponRoutes.js'; // 💳 Coupon Routes
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -140,6 +141,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', serviceRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api', chatRoutes); // 👈 Register Chat Route
+app.use('/api/coupons', couponRoutes); // 💳 Register Coupon Routes
 
 // 🖼️ Error Handler for Multer (File Uploads)
 app.use((err, req, res, next) => {

@@ -20,7 +20,7 @@ const ServicesPage = () => {
   const { isDark } = useTheme();
   const navigate = useNavigate();
 
-  const categories = ['all', 'Makeup', 'Skincare', 'Hair', 'Bridal', 'Combo', 'Other'];
+  const categories = ['all', 'Event Package', 'Standard Makeup', 'Add-On'];
 
   useEffect(() => { fetchServices(); }, []);
 

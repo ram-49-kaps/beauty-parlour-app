@@ -23,4 +23,25 @@ export async function query(sql, params) {
   return rows;
 }
 
+export async function withTransaction(callback) {
+  const connection = await pool.getConnection();
+
+  const txQuery = async (sql, params = []) => {
+    const [rows] = await connection.execute(sql, params);
+    return rows;
+  };
+
+  try {
+    await connection.beginTransaction();
+    const result = await callback(txQuery, connection);
+    await connection.commit();
+    return result;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
 export default pool;

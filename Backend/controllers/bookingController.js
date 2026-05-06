@@ -1,4 +1,4 @@
-import { query } from '../config/db.js';
+import { query, withTransaction } from '../config/db.js';
 import emailService from '../utils/emailService.js';
 import whatsappService from '../utils/whatsappService.js';
 import Razorpay from 'razorpay';
@@ -21,6 +21,173 @@ const calculateEndTime = (date, time, duration) => {
 
   const endDate = new Date(startDate.getTime() + duration * 60000);
   return endDate;
+};
+
+const getActiveBookingsForDate = async (dbQuery, bookingDate, { forUpdate = false } = {}) => {
+  const lockClause = forUpdate ? ' FOR UPDATE' : '';
+  return dbQuery(`
+    SELECT b.*, s.duration 
+    FROM bookings b
+    JOIN services s ON b.service_id = s.id
+    WHERE b.booking_date = ? 
+    AND b.status NOT IN ('rejected', 'cancelled')
+    ${lockClause}
+  `, [bookingDate]);
+};
+
+const findOverlappingBooking = (existingBookings, bookingDate, bookingTime, duration) => {
+  const proposedBookingStart = calculateEndTime(bookingDate, bookingTime, 0);
+  const proposedBookingEnd = calculateEndTime(bookingDate, bookingTime, duration);
+
+  if (!proposedBookingStart || !proposedBookingEnd) {
+    return { invalidDateTime: true, conflict: null };
+  }
+
+  const proposedStartMs = proposedBookingStart.getTime();
+  const proposedEndMs = proposedBookingEnd.getTime();
+
+  const conflict = existingBookings.find(existing => {
+    const existingStart = calculateEndTime(existing.booking_date, existing.booking_time, 0);
+    const existingEnd = calculateEndTime(existing.booking_date, existing.booking_time, existing.duration);
+    if (!existingStart || !existingEnd) return false;
+    return proposedStartMs < existingEnd.getTime() && proposedEndMs > existingStart.getTime();
+  });
+
+  return { invalidDateTime: false, conflict };
+};
+
+const getBookingByRazorpayRefs = async (dbQuery, paymentId, orderId, { forUpdate = false } = {}) => {
+  const lockClause = forUpdate ? ' FOR UPDATE' : '';
+  const bookings = await dbQuery(`
+    SELECT b.*, s.name as service_name
+    FROM bookings b
+    JOIN services s ON b.service_id = s.id
+    WHERE b.razorpay_payment_id = ? OR b.razorpay_order_id = ?
+    ${lockClause}
+  `, [paymentId, orderId]);
+
+  return bookings[0] || null;
+};
+
+const lockBookingDate = async (dbQuery, bookingDate) => {
+  await dbQuery('INSERT IGNORE INTO booking_date_locks (booking_date) VALUES (?)', [bookingDate]);
+  await dbQuery('SELECT booking_date FROM booking_date_locks WHERE booking_date = ? FOR UPDATE', [bookingDate]);
+};
+
+const sendBookingCreatedNotifications = async (booking, serviceName) => {
+  try {
+    await emailService.sendBookingNotification(booking, serviceName);
+
+    if (booking.customer_phone) {
+      const bookingForNotify = { ...booking, service_name: serviceName };
+      await whatsappService.sendBookingStatusMessage(bookingForNotify, 'pending');
+    }
+  } catch (notifyError) {
+    console.error('Notification error:', notifyError);
+  }
+};
+
+const normalizeAddOnIds = (addOnIds = []) => {
+  if (!Array.isArray(addOnIds)) return [];
+  return [...new Set(addOnIds.map(id => Number(id)).filter(Number.isInteger))];
+};
+
+const getAddOnDetails = async (dbQuery, addOnIds) => {
+  const normalizedIds = normalizeAddOnIds(addOnIds);
+  if (normalizedIds.length === 0) {
+    return { addOnTotal: 0, addOnNames: [] };
+  }
+
+  const placeholders = normalizedIds.map(() => '?').join(',');
+  const addOns = await dbQuery(`SELECT id, name, price FROM services WHERE id IN (${placeholders})`, normalizedIds);
+
+  if (addOns.length !== normalizedIds.length) {
+    const addOnError = new Error('One or more selected add-ons are invalid.');
+    addOnError.statusCode = 400;
+    throw addOnError;
+  }
+
+  return {
+    addOnTotal: addOns.reduce((sum, addOn) => sum + parseFloat(addOn.price), 0),
+    addOnNames: addOns.map(addOn => addOn.name)
+  };
+};
+
+const calculateCouponDiscount = async (dbQuery, { couponCode, totalAmount, userId, lockCoupon = false }) => {
+  if (!couponCode) {
+    return { discountAmount: 0, discountPercent: 0, validatedCouponCode: null };
+  }
+
+  const normalizedCode = couponCode.trim().toUpperCase();
+  const coupons = await dbQuery(
+    `SELECT * FROM coupons WHERE code = ? AND is_active = TRUE${lockCoupon ? ' FOR UPDATE' : ''}`,
+    [normalizedCode]
+  );
+
+  if (coupons.length === 0) {
+    return { discountAmount: 0, discountPercent: 0, validatedCouponCode: null };
+  }
+
+  const coupon = coupons[0];
+
+  if (coupon.max_uses !== null && coupon.times_used >= coupon.max_uses) {
+    return { discountAmount: 0, discountPercent: 0, validatedCouponCode: null };
+  }
+
+  if (coupon.is_new_user_only) {
+    if (!userId) {
+      return { discountAmount: 0, discountPercent: 0, validatedCouponCode: null };
+    }
+
+    const bookingCount = await dbQuery(
+      "SELECT COUNT(*) as count FROM bookings WHERE user_id = ? AND status NOT IN ('cancelled', 'rejected')",
+      [userId]
+    );
+
+    const usageCheck = await dbQuery(
+      'SELECT COUNT(*) as count FROM coupon_usage WHERE user_id = ? AND coupon_id = ?',
+      [userId, coupon.id]
+    );
+
+    if (bookingCount[0].count > 0 || usageCheck[0].count > 0) {
+      return { discountAmount: 0, discountPercent: 0, validatedCouponCode: null };
+    }
+  }
+
+  const discountPercent = parseFloat(coupon.discount_percent);
+  const discountAmount = Math.round((totalAmount * discountPercent) / 100 * 100) / 100;
+
+  return {
+    discountAmount,
+    discountPercent,
+    validatedCouponCode: normalizedCode
+  };
+};
+
+const calculateBookingPricing = async (dbQuery, { service, addOnIds, couponCode, userId, lockCoupon = false }) => {
+  const { addOnTotal, addOnNames } = await getAddOnDetails(dbQuery, addOnIds);
+  const totalAmount = parseFloat(service.price) + addOnTotal;
+  const { discountAmount, discountPercent, validatedCouponCode } = await calculateCouponDiscount(dbQuery, {
+    couponCode,
+    totalAmount,
+    userId,
+    lockCoupon
+  });
+  const finalTotal = totalAmount - discountAmount;
+  const advanceAmount = Math.ceil(finalTotal / 2);
+  const remainingAmount = finalTotal - advanceAmount;
+
+  return {
+    addOnTotal,
+    addOnNames,
+    totalAmount,
+    discountAmount,
+    discountPercent,
+    validatedCouponCode,
+    finalTotal,
+    advanceAmount,
+    remainingAmount
+  };
 };
 
 
@@ -60,7 +227,8 @@ export const getBookedSlots = async (req, res) => {
 // --------------------- CREATE RAZORPAY ORDER (Step 1) ---------------------
 export const createPaymentOrder = async (req, res) => {
   try {
-    const { customer_name, customer_email, customer_phone, customer_city, service_id, booking_date, booking_time, notes, user_id, coupon_code, add_on_ids } = req.body;
+    const { customer_name, customer_email, customer_phone, customer_city, service_id, booking_date, booking_time, notes, coupon_code, add_on_ids } = req.body;
+    const authenticatedUserId = req.user?.id;
 
     // 1. Input Validation
     if (!customer_name || !customer_email || !service_id || !booking_date || !booking_time) {
@@ -111,125 +279,60 @@ export const createPaymentOrder = async (req, res) => {
     const service = services[0];
     const serviceDuration = service.duration;
 
-    // 3. Calculate add-on prices
-    let addOnTotal = 0;
-    let addOnNames = [];
-    if (add_on_ids && add_on_ids.length > 0) {
-      const placeholders = add_on_ids.map(() => '?').join(',');
-      const addOns = await query(`SELECT id, name, price FROM services WHERE id IN (${placeholders})`, add_on_ids);
-      addOnTotal = addOns.reduce((sum, a) => sum + parseFloat(a.price), 0);
-      addOnNames = addOns.map(a => a.name);
-    }
-
-    // 4. Calculate total
-    let totalAmount = parseFloat(service.price) + addOnTotal;
-
-    // 5. Apply coupon if provided
-    let discountAmount = 0;
-    let discountPercent = 0;
-    let validatedCouponCode = null;
-
-    if (coupon_code) {
-      const normalizedCode = coupon_code.trim().toUpperCase();
-      const coupons = await query('SELECT * FROM coupons WHERE code = ? AND is_active = TRUE', [normalizedCode]);
-
-      if (coupons.length > 0) {
-        const coupon = coupons[0];
-        const registeredUserId = user_id || req.user?.id;
-
-        // Validate new-user-only
-        if (coupon.is_new_user_only && registeredUserId) {
-          const bookingCount = await query(
-            "SELECT COUNT(*) as count FROM bookings WHERE user_id = ? AND status NOT IN ('cancelled', 'rejected')",
-            [registeredUserId]
-          );
-
-          const usageCheck = await query(
-            'SELECT COUNT(*) as count FROM coupon_usage WHERE user_id = ? AND coupon_id = ?',
-            [registeredUserId, coupon.id]
-          );
-
-          if (bookingCount[0].count === 0 && usageCheck[0].count === 0) {
-            discountPercent = parseFloat(coupon.discount_percent);
-            discountAmount = Math.round((totalAmount * discountPercent) / 100 * 100) / 100;
-            validatedCouponCode = normalizedCode;
-          }
-        } else if (!coupon.is_new_user_only) {
-          discountPercent = parseFloat(coupon.discount_percent);
-          discountAmount = Math.round((totalAmount * discountPercent) / 100 * 100) / 100;
-          validatedCouponCode = normalizedCode;
-        }
-      }
-    }
-
-    const finalTotal = totalAmount - discountAmount;
-    const advanceAmount = Math.ceil(finalTotal / 2);  // 50% rounded up
-    const remainingAmount = finalTotal - advanceAmount;
+    // 3. Calculate add-ons, total and coupon discount using the authenticated user only
+    const pricing = await calculateBookingPricing(query, {
+      service,
+      addOnIds: add_on_ids,
+      couponCode: coupon_code,
+      userId: authenticatedUserId
+    });
 
     // 6. Conflict Check
-    const proposedBookingStart = calculateEndTime(booking_date, booking_time, 0);
-    const proposedBookingEnd = calculateEndTime(booking_date, booking_time, serviceDuration);
+    const existingBookings = await getActiveBookingsForDate(query, booking_date);
+    const { invalidDateTime, conflict } = findOverlappingBooking(existingBookings, booking_date, booking_time, serviceDuration);
 
-    if (!proposedBookingStart || !proposedBookingEnd) {
+    if (invalidDateTime) {
       return res.status(400).json({ message: 'Invalid date or time format provided.' });
     }
 
-    const conflictCheckQuery = `
-        SELECT b.*, s.duration 
-        FROM bookings b
-        JOIN services s ON b.service_id = s.id
-        WHERE b.booking_date = ? 
-        AND b.status NOT IN ('rejected', 'cancelled')
-    `;
-
-    const existingBookings = await query(conflictCheckQuery, [booking_date]);
-
-    const proposedStartMs = proposedBookingStart.getTime();
-    const proposedEndMs = proposedBookingEnd.getTime();
-
-    const isConflict = existingBookings.some(existing => {
-      const existingStart = calculateEndTime(existing.booking_date, existing.booking_time, 0);
-      const existingEnd = calculateEndTime(existing.booking_date, existing.booking_time, existing.duration);
-      if (!existingStart || !existingEnd) return false;
-      return proposedStartMs < existingEnd.getTime() && proposedEndMs > existingStart.getTime();
-    });
-
-    if (isConflict) {
+    if (conflict) {
       return res.status(409).json({ message: 'This time slot overlaps with an existing appointment.' });
     }
 
     // 7. Create Razorpay Order (for 50% advance)
     const razorpayOrder = await razorpay.orders.create({
-      amount: Math.round(advanceAmount * 100), // Razorpay expects paise
+      amount: Math.round(pricing.advanceAmount * 100), // Razorpay expects paise
       currency: 'INR',
       receipt: `booking_${Date.now()}`,
       notes: {
         customer_name,
         customer_email,
+        user_id: authenticatedUserId,
         service: service.name,
         booking_date,
-        booking_time
+        booking_time,
+        coupon_code: pricing.validatedCouponCode || ''
       }
     });
 
     // 8. Return order details to frontend
     res.json({
       order_id: razorpayOrder.id,
-      amount: advanceAmount,
+      amount: pricing.advanceAmount,
       currency: 'INR',
       key_id: process.env.RAZORPAY_KEY_ID,
       booking_details: {
         service_name: service.name,
         service_price: parseFloat(service.price),
-        add_on_total: addOnTotal,
-        add_on_names: addOnNames,
-        total_amount: totalAmount,
-        discount_amount: discountAmount,
-        discount_percent: discountPercent,
-        coupon_code: validatedCouponCode,
-        final_total: finalTotal,
-        advance_amount: advanceAmount,
-        remaining_amount: remainingAmount
+        add_on_total: pricing.addOnTotal,
+        add_on_names: pricing.addOnNames,
+        total_amount: pricing.totalAmount,
+        discount_amount: pricing.discountAmount,
+        discount_percent: pricing.discountPercent,
+        coupon_code: pricing.validatedCouponCode,
+        final_total: pricing.finalTotal,
+        advance_amount: pricing.advanceAmount,
+        remaining_amount: pricing.remainingAmount
       }
     });
 
@@ -255,14 +358,22 @@ export const verifyPaymentAndBook = async (req, res) => {
       booking_date,
       booking_time,
       notes,
-      user_id,
       coupon_code,
-      total_amount,
-      discount_amount,
-      advance_amount,
-      remaining_amount,
-      add_on_names
+      add_on_ids
     } = req.body;
+    const authenticatedUserId = req.user?.id;
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ message: 'Missing Razorpay payment verification fields.' });
+    }
+
+    if (!customer_name || !customer_email || !service_id || !booking_date || !booking_time) {
+      return res.status(400).json({ message: 'Missing required booking fields.' });
+    }
+
+    if (!calculateEndTime(booking_date, booking_time, 0)) {
+      return res.status(400).json({ message: 'Invalid date or time format provided.' });
+    }
 
     // 1. Verify Razorpay Signature
     const body = razorpay_order_id + "|" + razorpay_payment_id;
@@ -275,95 +386,149 @@ export const verifyPaymentAndBook = async (req, res) => {
       return res.status(400).json({ message: 'Payment verification failed. Invalid signature.' });
     }
 
-    // 2. Get service details
-    const services = await query('SELECT * FROM services WHERE id = ?', [service_id]);
-    if (services.length === 0) {
-      return res.status(404).json({ message: 'Service not found' });
-    }
-    const service = services[0];
-
-    // 3. Create booking with payment info
-    const bookingNotes = notes === undefined ? null : notes;
-    const bookingPhone = customer_phone === undefined ? null : customer_phone;
-    const registeredUserId = user_id === undefined ? null : user_id;
-
-    // Build notes with add-ons
-    let finalNotes = bookingNotes;
-    if (add_on_names && add_on_names.length > 0) {
-      const addOnStr = add_on_names.join(', ');
-      finalNotes = `Extras: ${addOnStr}. \nUser Notes: ${bookingNotes || ''}`;
+    const existingProcessedBooking = await getBookingByRazorpayRefs(query, razorpay_payment_id, razorpay_order_id);
+    if (existingProcessedBooking) {
+      return res.status(200).json({
+        message: 'Payment already verified & booking already created',
+        booking: existingProcessedBooking
+      });
     }
 
-    const result = await query(
-      `INSERT INTO bookings (customer_name, customer_email, customer_phone, customer_city, service_id, 
-       booking_date, booking_time, notes, total_amount, discount_amount, coupon_code,
-       advance_amount, remaining_amount, payment_status,
-       razorpay_order_id, razorpay_payment_id, status, user_id) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        customer_name, customer_email, bookingPhone, customer_city, service_id,
-        booking_date, booking_time, finalNotes, total_amount, discount_amount, coupon_code || null,
-        advance_amount, remaining_amount, 'advance_paid',
-        razorpay_order_id, razorpay_payment_id, 'pending', registeredUserId
-      ]
-    );
+    const razorpayOrder = await razorpay.orders.fetch(razorpay_order_id);
 
-    const booking = {
-      id: result.insertId,
-      customer_name,
-      customer_email,
-      customer_phone: bookingPhone,
-      service_id,
-      booking_date,
-      booking_time,
-      notes: finalNotes,
-      total_amount,
-      discount_amount,
-      coupon_code: coupon_code || null,
-      advance_amount,
-      remaining_amount,
-      payment_status: 'advance_paid',
-      razorpay_order_id,
-      razorpay_payment_id,
-      status: 'pending',
-      user_id: registeredUserId
-    };
+    const { booking, serviceName, alreadyProcessed } = await withTransaction(async (txQuery) => {
+      await lockBookingDate(txQuery, booking_date);
 
-    // 4. Record coupon usage
-    if (coupon_code && registeredUserId) {
-      const coupons = await query('SELECT id FROM coupons WHERE code = ?', [coupon_code.trim().toUpperCase()]);
-      if (coupons.length > 0) {
-        await query(
-          'INSERT INTO coupon_usage (user_id, coupon_id, booking_id) VALUES (?, ?, ?)',
-          [registeredUserId, coupons[0].id, result.insertId]
-        );
-        await query('UPDATE coupons SET times_used = times_used + 1 WHERE id = ?', [coupons[0].id]);
+      const existingPaymentBooking = await getBookingByRazorpayRefs(txQuery, razorpay_payment_id, razorpay_order_id, { forUpdate: true });
+      if (existingPaymentBooking) {
+        return {
+          booking: existingPaymentBooking,
+          serviceName: existingPaymentBooking.service_name,
+          alreadyProcessed: true
+        };
       }
-    }
+
+      // 2. Get service details and recalculate pricing server-side
+      const services = await txQuery('SELECT * FROM services WHERE id = ?', [service_id]);
+      if (services.length === 0) {
+        const serviceError = new Error('Service not found');
+        serviceError.statusCode = 404;
+        throw serviceError;
+      }
+      const service = services[0];
+      const pricing = await calculateBookingPricing(txQuery, {
+        service,
+        addOnIds: add_on_ids,
+        couponCode: coupon_code,
+        userId: authenticatedUserId,
+        lockCoupon: true
+      });
+
+      const expectedAdvanceAmount = Math.round(pricing.advanceAmount * 100);
+      if (razorpayOrder.currency !== 'INR' || Number(razorpayOrder.amount) !== expectedAdvanceAmount) {
+        const amountError = new Error('Payment amount does not match the verified booking total.');
+        amountError.statusCode = 400;
+        throw amountError;
+      }
+
+      // 3. Final conflict check under a per-date DB lock
+      const existingBookings = await getActiveBookingsForDate(txQuery, booking_date, { forUpdate: true });
+      const { invalidDateTime, conflict } = findOverlappingBooking(existingBookings, booking_date, booking_time, service.duration);
+
+      if (invalidDateTime) {
+        const dateError = new Error('Invalid date or time format provided.');
+        dateError.statusCode = 400;
+        throw dateError;
+      }
+
+      if (conflict) {
+        const conflictError = new Error('This time slot was just booked by another customer. Please select a different slot.');
+        conflictError.statusCode = 409;
+        throw conflictError;
+      }
+
+      // 4. Create booking with payment info
+      const bookingNotes = notes === undefined ? null : notes;
+      const bookingPhone = customer_phone === undefined ? null : customer_phone;
+      const registeredUserId = authenticatedUserId || null;
+
+      let finalNotes = bookingNotes;
+      if (pricing.addOnNames.length > 0) {
+        const addOnStr = pricing.addOnNames.join(', ');
+        finalNotes = `Extras: ${addOnStr}. \nUser Notes: ${bookingNotes || ''}`;
+      }
+
+      const result = await txQuery(
+        `INSERT INTO bookings (customer_name, customer_email, customer_phone, customer_city, service_id, 
+         booking_date, booking_time, notes, total_amount, discount_amount, coupon_code,
+         advance_amount, remaining_amount, payment_status,
+         razorpay_order_id, razorpay_payment_id, status, user_id) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          customer_name, customer_email, bookingPhone, customer_city, service_id,
+          booking_date, booking_time, finalNotes, pricing.totalAmount, pricing.discountAmount, pricing.validatedCouponCode,
+          pricing.advanceAmount, pricing.remainingAmount, 'advance_paid',
+          razorpay_order_id, razorpay_payment_id, 'pending', registeredUserId
+        ]
+      );
+
+      const createdBooking = {
+        id: result.insertId,
+        customer_name,
+        customer_email,
+        customer_phone: bookingPhone,
+        customer_city,
+        service_id,
+        booking_date,
+        booking_time,
+        notes: finalNotes,
+        total_amount: pricing.totalAmount,
+        discount_amount: pricing.discountAmount,
+        coupon_code: pricing.validatedCouponCode,
+        advance_amount: pricing.advanceAmount,
+        remaining_amount: pricing.remainingAmount,
+        payment_status: 'advance_paid',
+        razorpay_order_id,
+        razorpay_payment_id,
+        status: 'pending',
+        user_id: registeredUserId
+      };
+
+      // 5. Record coupon usage
+      if (pricing.validatedCouponCode && registeredUserId) {
+        const coupons = await txQuery('SELECT id FROM coupons WHERE code = ?', [pricing.validatedCouponCode]);
+        if (coupons.length > 0) {
+          const couponUsageResult = await txQuery(
+            'INSERT INTO coupon_usage (user_id, coupon_id, booking_id) VALUES (?, ?, ?)',
+            [registeredUserId, coupons[0].id, result.insertId]
+          );
+          if (couponUsageResult.affectedRows > 0) {
+            await txQuery('UPDATE coupons SET times_used = times_used + 1 WHERE id = ?', [coupons[0].id]);
+          }
+        }
+      }
+
+      return {
+        booking: createdBooking,
+        serviceName: service.name,
+        alreadyProcessed: false
+      };
+    });
 
     // 5. Response Sent Immediately
-    res.status(201).json({
-      message: 'Payment verified & booking created successfully',
-      booking: { ...booking, service_name: service.name }
+    res.status(alreadyProcessed ? 200 : 201).json({
+      message: alreadyProcessed ? 'Payment already verified & booking already created' : 'Payment verified & booking created successfully',
+      booking: { ...booking, service_name: serviceName }
     });
 
     // 6. Send Notifications (Async Background Process)
-    (async () => {
-      try {
-        await emailService.sendBookingNotification(booking, service.name);
-
-        if (bookingPhone) {
-          const bookingForNotify = { ...booking, service_name: service.name };
-          await whatsappService.sendBookingStatusMessage(bookingForNotify, 'pending');
-        }
-      } catch (notifyError) {
-        console.error('Notification error:', notifyError);
-      }
-    })();
+    if (!alreadyProcessed) {
+      sendBookingCreatedNotifications(booking, serviceName);
+    }
 
   } catch (error) {
     console.error('Verify payment error:', error);
-    res.status(500).json({ message: 'Error verifying payment' });
+    res.status(error.statusCode || 500).json({ message: error.statusCode ? error.message : 'Error verifying payment' });
   }
 };
 
@@ -371,7 +536,7 @@ export const verifyPaymentAndBook = async (req, res) => {
 // --------------------- LEGACY CREATE BOOKING (Kept for backward compatibility) ---------------------
 export const createBooking = async (req, res) => {
   try {
-    const { customer_name, customer_email, customer_phone, service_id, booking_date, booking_time, notes, user_id } = req.body;
+    const { customer_name, customer_email, customer_phone, service_id, booking_date, booking_time, notes } = req.body;
 
     // 1. Input Validation
     if (!customer_name || !customer_email || !service_id || !booking_date || !booking_time) {
@@ -387,72 +552,54 @@ export const createBooking = async (req, res) => {
     const service = services[0];
     const serviceDuration = service.duration;
 
-    // 3. Calculate Proposed Booking Times
-    const proposedBookingStart = calculateEndTime(booking_date, booking_time, 0);
-    const proposedBookingEnd = calculateEndTime(booking_date, booking_time, serviceDuration);
-
-    if (!proposedBookingStart || !proposedBookingEnd) {
+    if (!calculateEndTime(booking_date, booking_time, 0)) {
       return res.status(400).json({ message: 'Invalid date or time format provided.' });
     }
 
-    // --- 4. ROBUST CONFLICT CHECK ---
-    const conflictCheckQuery = `
-        SELECT 
-            b.*, 
-            s.duration 
-        FROM bookings b
-        JOIN services s ON b.service_id = s.id
-        WHERE b.booking_date = ? 
-        AND b.status != 'rejected'
-    `;
+    const booking = await withTransaction(async (txQuery) => {
+      await lockBookingDate(txQuery, booking_date);
 
-    const existingBookings = await query(conflictCheckQuery, [booking_date]);
+      const existingBookings = await getActiveBookingsForDate(txQuery, booking_date, { forUpdate: true });
+      const { invalidDateTime, conflict } = findOverlappingBooking(existingBookings, booking_date, booking_time, serviceDuration);
 
-    const proposedStartMs = proposedBookingStart.getTime();
-    const proposedEndMs = proposedBookingEnd.getTime();
+      if (invalidDateTime) {
+        const dateError = new Error('Invalid date or time format provided.');
+        dateError.statusCode = 400;
+        throw dateError;
+      }
 
-    const isConflict = existingBookings.some(existing => {
-      const existingStart = calculateEndTime(existing.booking_date, existing.booking_time, 0);
-      const existingEnd = calculateEndTime(existing.booking_date, existing.booking_time, existing.duration);
+      if (conflict) {
+        const conflictError = new Error('This time slot overlaps with an existing appointment.');
+        conflictError.statusCode = 409;
+        throw conflictError;
+      }
 
-      if (!existingStart || !existingEnd) return false;
+      // 5. Create booking
+      const bookingNotes = notes === undefined ? null : notes;
+      const bookingPhone = customer_phone === undefined ? null : customer_phone;
+      const registeredUserId = req.user?.id || null;
 
-      const existingStartMs = existingStart.getTime();
-      const existingEndMs = existingEnd.getTime();
+      const result = await txQuery(
+        `INSERT INTO bookings (customer_name, customer_email, customer_phone, service_id, 
+         booking_date, booking_time, notes, total_amount, status, user_id) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [customer_name, customer_email, bookingPhone, service_id, booking_date, booking_time, bookingNotes, service.price, 'pending', registeredUserId]
+      );
 
-      return proposedStartMs < existingEndMs && proposedEndMs > existingStartMs;
+      return {
+        id: result.insertId,
+        customer_name,
+        customer_email,
+        customer_phone: bookingPhone,
+        service_id,
+        booking_date,
+        booking_time,
+        notes: bookingNotes,
+        total_amount: service.price,
+        status: 'pending',
+        user_id: registeredUserId
+      };
     });
-
-
-    if (isConflict) {
-      return res.status(409).json({ message: 'This time slot overlaps with an existing appointment.' });
-    }
-
-    // 5. Create booking
-    const bookingNotes = notes === undefined ? null : notes;
-    const bookingPhone = customer_phone === undefined ? null : customer_phone;
-    const registeredUserId = user_id === undefined ? null : user_id;
-
-    const result = await query(
-      `INSERT INTO bookings (customer_name, customer_email, customer_phone, service_id, 
-       booking_date, booking_time, notes, total_amount, status, user_id) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [customer_name, customer_email, bookingPhone, service_id, booking_date, booking_time, bookingNotes, service.price, 'pending', registeredUserId]
-    );
-
-    const booking = {
-      id: result.insertId,
-      customer_name,
-      customer_email,
-      customer_phone: bookingPhone,
-      service_id,
-      booking_date,
-      booking_time,
-      notes: bookingNotes,
-      total_amount: service.price,
-      status: 'pending',
-      user_id: registeredUserId
-    };
 
     // ✅ Response Sent Immediately (Fix for stuck loader)
     res.status(201).json({
@@ -461,25 +608,11 @@ export const createBooking = async (req, res) => {
     });
 
     // 📩 Send Notifications (Async Background Process)
-    (async () => {
-      try {
-        // 1. Email
-        await emailService.sendBookingNotification(booking, service.name);
-
-        // 2. WhatsApp
-        if (bookingPhone) {
-          // Prepare object with service name for the template
-          const bookingForNotify = { ...booking, service_name: service.name };
-          await whatsappService.sendBookingStatusMessage(bookingForNotify, 'pending');
-        }
-      } catch (notifyError) {
-        console.error('Notification error:', notifyError);
-      }
-    })();
+    sendBookingCreatedNotifications(booking, service.name);
 
   } catch (error) {
     console.error('Create booking error:', error);
-    res.status(500).json({ message: 'Error creating booking' });
+    res.status(error.statusCode || 500).json({ message: error.statusCode ? error.message : 'Error creating booking' });
   }
 };
 

@@ -278,7 +278,6 @@ const BookingPage = () => {
     try {
       const orderPayload = {
         ...formData,
-        user_id: user?.id,
         coupon_code: couponApplied?.code || null,
         add_on_ids: selectedAddOns
       };
@@ -302,12 +301,8 @@ const BookingPage = () => {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
               ...formData,
-              user_id: user?.id,
               coupon_code: couponApplied?.code || null,
-              total_amount: booking_details.total_amount,
-              discount_amount: booking_details.discount_amount,
-              advance_amount: booking_details.advance_amount,
-              remaining_amount: booking_details.remaining_amount,
+              add_on_ids: selectedAddOns,
               add_on_names: addOnNames
             };
             const verifyRes = await verifyPayment(verifyData);

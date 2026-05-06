@@ -46,6 +46,22 @@ const Navbar = () => {
   const textColor = useHeroStyle ? 'text-white' : isDark ? 'text-white' : 'text-gray-900';
   const textMuted = useHeroStyle ? 'text-white/60' : isDark ? 'text-stone-400' : 'text-gray-500';
   const borderColor = useHeroStyle ? 'border-white/20' : isDark ? 'border-white/10' : 'border-gray-200';
+  const hoverTextColor = useHeroStyle ? 'hover:text-white' : isDark ? 'hover:text-white' : 'hover:text-gray-900';
+  const desktopUtilityShell = useHeroStyle
+    ? 'border-white/15 bg-black/20 backdrop-blur-md shadow-[0_18px_40px_rgba(0,0,0,0.18)]'
+    : isDark
+      ? 'border-white/10 bg-white/5'
+      : 'border-gray-200 bg-white/80 shadow-sm';
+  const desktopThemeButton = useHeroStyle
+    ? 'border-white/20 text-white/80 hover:text-white hover:bg-white/10'
+    : isDark
+      ? 'border-white/10 text-stone-400 hover:text-white hover:bg-white/10'
+      : 'border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-100';
+  const desktopLoginButton = useHeroStyle
+    ? 'text-white hover:bg-white/10'
+    : isDark
+      ? 'text-white hover:bg-white/10'
+      : 'text-gray-900 hover:bg-gray-100';
 
   return (
     <>
@@ -67,50 +83,57 @@ const Navbar = () => {
             </Link>
 
             {/* Desktop Nav */}
-            <div className="hidden md:flex items-center space-x-12">
-              <Link to="/" className={`text-xs font-bold uppercase tracking-widest transition-all ${isActive('/') ? textColor : textMuted} hover:${textColor}`}>Home</Link>
-              <Link to="/services" className={`text-xs font-bold uppercase tracking-widest transition-all ${isActive('/services') ? textColor : textMuted} hover:${textColor}`}>Services</Link>
+            <div className="hidden md:flex items-center gap-10">
+              <div className="flex items-center gap-10">
+                <Link to="/" className={`text-xs font-bold uppercase tracking-widest transition-colors ${isActive('/') ? textColor : textMuted} ${hoverTextColor}`}>Home</Link>
+                <Link to="/services" className={`text-xs font-bold uppercase tracking-widest transition-colors ${isActive('/services') ? textColor : textMuted} ${hoverTextColor}`}>Services</Link>
 
-              {user?.role === 'admin' && (
-                <Link to="/admin-dashboard" className={`flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-all ${isActive('/admin-dashboard') ? textColor : textMuted}`}>
-                  <LayoutDashboard className="w-3 h-3" /> Dashboard
-                </Link>
-              )}
-
-              {/* 🌗 THEME TOGGLE */}
-              <button
-                onClick={toggleTheme}
-                className={`p-2 rounded-full transition-all duration-300 border ${
-                  useHeroStyle
-                    ? 'border-white/20 text-white/80 hover:text-white hover:bg-white/10'
-                    : isDark
-                      ? 'border-white/10 text-stone-400 hover:text-white hover:bg-white/10'
-                      : 'border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-                title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              >
-                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
+                {user?.role === 'admin' && (
+                  <Link to="/admin-dashboard" className={`flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-colors ${isActive('/admin-dashboard') ? textColor : textMuted} ${hoverTextColor}`}>
+                    <LayoutDashboard className="w-3 h-3" /> Dashboard
+                  </Link>
+                )}
+              </div>
 
               {user ? (
-                <div className={`flex items-center gap-6 pl-6 border-l ${borderColor}`}>
+                <div className={`flex items-center gap-4 pl-6 border-l ${borderColor}`}>
+                  <button
+                    onClick={toggleTheme}
+                    className={`p-2 rounded-full transition-all duration-300 border ${desktopThemeButton}`}
+                    title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                  >
+                    {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                  </button>
+
                   {user.role !== 'admin' && (
                     <>
                       <Link to="/booking" className={`${isDark ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'} px-6 py-3 text-xs font-bold uppercase tracking-widest transition-all duration-300 rounded-lg`}>
                         Book Now
                       </Link>
-                      <Link to="/profile" className={`flex items-center gap-3 ${textMuted} hover:${textColor} transition-colors group`}>
+                      <Link to="/profile" className={`flex items-center gap-3 transition-colors group ${textMuted} ${hoverTextColor}`}>
                         <div className={`p-1 rounded-full border ${borderColor} transition-colors`}><User className="w-3 h-3" /></div>
                         <span className="text-xs font-bold uppercase tracking-wider">{user.name}</span>
                       </Link>
                     </>
                   )}
+
                   <button onClick={handleLogoutClick} className={`flex items-center gap-2 text-xs font-bold uppercase tracking-widest ${textMuted} hover:text-red-500 transition-colors`}>
                     <LogOut className="w-3 h-3" /> Exit
                   </button>
                 </div>
               ) : (
-                <Link to="/login" className={`text-xs font-bold uppercase tracking-widest ${textColor} hover:opacity-70 transition-colors`}>Login</Link>
+                <div className={`flex items-center gap-2 rounded-full border px-2 py-2 transition-all duration-300 ${desktopUtilityShell}`}>
+                  <button
+                    onClick={toggleTheme}
+                    className={`h-10 w-10 inline-flex items-center justify-center rounded-full border transition-all duration-300 ${desktopThemeButton}`}
+                    title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                  >
+                    {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                  </button>
+                  <Link to="/login" className={`px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${desktopLoginButton}`}>
+                    Login
+                  </Link>
+                </div>
               )}
             </div>
 

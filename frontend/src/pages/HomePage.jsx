@@ -63,7 +63,7 @@ const Homepage = () => {
             src="https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?q=80&w=2070&auto=format&fit=crop"
             alt="Luxury Salon Interior" className="w-full h-full object-cover opacity-70" fetchPriority="high" loading="eager"
           />
-          <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-b from-black/60 via-black/30 to-stone-950' : 'bg-gradient-to-b from-black/50 via-black/20 to-white'}`}></div>
+          <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-b from-black/60 via-black/30 to-stone-950' : 'bg-gradient-to-b from-black/70 via-black/25 to-white/95'}`}></div>
         </div>
 
         <div className="relative z-10 text-center max-w-5xl mx-auto px-6 animate-fadeInUp">

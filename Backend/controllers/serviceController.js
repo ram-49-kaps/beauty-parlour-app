@@ -94,13 +94,12 @@ export const uploadServiceImage = async (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    // Return the relative path or full URL. 
-    // Usually relative path is better if our frontend uses getImageUrl helper.
-    const imagePath = req.file.filename;
+    // Cloudinary returns the secure URL directly in req.file.secure_url
+    const imageUrl = req.file.secure_url;
 
     res.json({
       message: 'Image uploaded successfully',
-      image_url: imagePath
+      image_url: imageUrl
     });
   } catch (error) {
     console.error('Service image upload error:', error);

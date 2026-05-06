@@ -1,28 +1,35 @@
 import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import cloudinary from 'cloudinary';
+import dotenv from 'dotenv';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+dotenv.config();
 
-// Set storage engine
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Construct the path to the uploads folder in the parent directory
-    const uploadPath = path.join(__dirname, '..', 'uploads');
-    cb(null, uploadPath);
+// Configure Cloudinary
+cloudinary.v2.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Configure Cloudinary storage for multer
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary.v2,
+  params: {
+    folder: 'flawless-beauty-parlour', // Organization folder in Cloudinary
+    allowed_formats: ['jpeg', 'jpg', 'png', 'webp'],
+    resource_type: 'auto',
+    public_id: (req, file) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      return `asset-${uniqueSuffix}`;
+    },
   },
-  filename: (req, file, cb) => {
-    // Generate unique filename
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `asset-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
 });
 
 // Check file type
 const fileFilter = (req, file, cb) => {
   const filetypes = /jpeg|jpg|png|webp/;
-  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+  const extname = filetypes.test(file.originalname.split('.').pop().toLowerCase());
   const mimetype = filetypes.test(file.mimetype);
 
   if (mimetype && extname) {
@@ -37,3 +44,6 @@ export const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // Limit 10MB
   fileFilter: fileFilter
 });
+
+// Export cloudinary for direct use if needed
+export { cloudinary };

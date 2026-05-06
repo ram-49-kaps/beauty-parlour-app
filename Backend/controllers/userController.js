@@ -6,9 +6,8 @@ export const uploadProfileImage = async (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    // Create the full URL for the image
-    // Note: Replace localhost with your production domain when deploying
-    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    // Cloudinary returns the secure URL directly
+    const imageUrl = req.file.secure_url;
     const userId = req.user.id;
 
     // Update Database

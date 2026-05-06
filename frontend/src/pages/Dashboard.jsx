@@ -8,16 +8,18 @@ import {
 } from 'recharts';
 import {
   LayoutDashboard, Users, Calendar, IndianRupee, Bell, Search,
-  MapPin, Cloud, Sun, LogOut, CheckCircle, XCircle, MoreHorizontal,
+  MapPin, Cloud, Sun, Moon, LogOut, CheckCircle, XCircle, MoreHorizontal,
   Wind, Droplets, Trash2, Edit2, Plus, Filter, Loader2, AlertTriangle,
   Clock, Download, RefreshCcw, Send
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { API_BASE_URL, getImageUrl } from '../config'; // Import Config
+import { useTheme } from '../context/ThemeContext';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const globeEl = useRef();
+  const { isDark, toggleTheme } = useTheme();
 
   // --- STATE ---
   const [activeTab, setActiveTab] = useState('overview'); // overview, bookings, services, gallery
@@ -415,29 +417,55 @@ const Dashboard = () => {
 
   // --- RENDER ---
   return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-white/20">
+    <div className={`dashboard-shell min-h-screen font-sans transition-colors duration-300 ${
+      isDark
+        ? 'dashboard-dark bg-black text-white selection:bg-white/20'
+        : 'dashboard-light bg-gray-50 text-gray-900 selection:bg-gray-900 selection:text-white'
+    }`}>
       <Toaster position="top-center" />
 
       {/* HEADER - MOBILE OPTIMIZED */}
-      <header className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-xl border-b border-white/10">
+      <header className={`fixed top-0 w-full z-50 backdrop-blur-xl border-b transition-colors duration-300 ${
+        isDark ? 'bg-black/80 border-white/10' : 'bg-white/85 border-gray-200 shadow-sm'
+      }`}>
         <div className="max-w-[1600px] mx-auto px-4 h-16 md:h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 md:gap-4">
-            <div className="w-8 h-8 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white/20 shadow-lg bg-white">
+            <div className={`w-8 h-8 md:w-12 md:h-12 rounded-full overflow-hidden border-2 shadow-lg bg-white ${
+              isDark ? 'border-white/20' : 'border-gray-200'
+            }`}>
               <img src="/Gallery/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
             </div>
-            <span className="text-sm md:text-xl font-light tracking-wide text-white">ADMIN<span className="font-bold text-white">PANEL</span></span>
+            <span className={`text-sm md:text-xl font-light tracking-wide ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              ADMIN<span className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>PANEL</span>
+            </span>
           </div>
           <div className="flex items-center gap-2 md:gap-4">
             {/* 🔄 REFRESH BUTTON */}
             <button
               onClick={handleRefresh}
-              className={`p-2 rounded-full text-stone-400 hover:text-white hover:bg-white/10 transition-all ${refreshing ? 'animate-spin' : ''}`}
+              className={`p-2 rounded-full transition-all ${
+                isDark
+                  ? 'text-stone-400 hover:text-white hover:bg-white/10'
+                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+              } ${refreshing ? 'animate-spin' : ''}`}
               title="Refresh Data"
             >
               <RefreshCcw size={16} className="md:w-5 md:h-5" />
             </button>
 
-            <div className="h-5 w-px bg-white/10"></div>
+            <button
+              onClick={toggleTheme}
+              className={`inline-flex items-center justify-center rounded-full border p-2 transition-all ${
+                isDark
+                  ? 'border-white/10 text-stone-300 hover:bg-white/10 hover:text-white'
+                  : 'border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {isDark ? <Sun size={16} className="md:w-5 md:h-5" /> : <Moon size={16} className="md:w-5 md:h-5" />}
+            </button>
+
+            <div className={`h-5 w-px ${isDark ? 'bg-white/10' : 'bg-gray-200'}`}></div>
 
             {/* ⚠️ RESET DATA BUTTON */}
             <button
@@ -448,7 +476,12 @@ const Dashboard = () => {
               <AlertTriangle size={14} /> <span className="hidden sm:inline">Reset</span>
             </button>
 
-            <button onClick={handleLogout} className="flex items-center gap-1 md:gap-2 text-[9px] md:text-xs font-bold uppercase tracking-widest text-stone-400 hover:text-red-400 transition-colors">
+            <button
+              onClick={handleLogout}
+              className={`flex items-center gap-1 md:gap-2 text-[9px] md:text-xs font-bold uppercase tracking-widest transition-colors ${
+                isDark ? 'text-stone-400 hover:text-red-400' : 'text-gray-500 hover:text-red-500'
+              }`}
+            >
               <LogOut size={14} /> <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
@@ -522,12 +555,12 @@ const Dashboard = () => {
               </div>
               <ResponsiveContainer width="100%" height="80%">
                 <AreaChart data={chartData}>
-                  <defs><linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#fff" stopOpacity={0.1} /><stop offset="95%" stopColor="#fff" stopOpacity={0} /></linearGradient></defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                  <XAxis dataKey="name" stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} itemStyle={{ color: '#fff' }} />
-                  <Area type="monotone" dataKey="revenue" stroke="#fff" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue)" />
+                  <defs><linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={isDark ? '#ffffff' : '#111827'} stopOpacity={0.12} /><stop offset="95%" stopColor={isDark ? '#ffffff' : '#111827'} stopOpacity={0} /></linearGradient></defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#333333' : '#e5e7eb'} vertical={false} />
+                  <XAxis dataKey="name" stroke={isDark ? '#666666' : '#9ca3af'} fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke={isDark ? '#666666' : '#9ca3af'} fontSize={12} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: isDark ? '#000000' : '#ffffff', border: `1px solid ${isDark ? '#333333' : '#e5e7eb'}`, borderRadius: '12px' }} itemStyle={{ color: isDark ? '#ffffff' : '#111827' }} />
+                  <Area type="monotone" dataKey="revenue" stroke={isDark ? '#ffffff' : '#111827'} strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -1030,6 +1063,77 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
+      <style>{`
+        .dashboard-light {
+          color-scheme: light;
+        }
+
+        .dashboard-light .bg-stone-900,
+        .dashboard-light .bg-stone-900\\/30,
+        .dashboard-light .bg-stone-900\\/50,
+        .dashboard-light .bg-black\\/50,
+        .dashboard-light .bg-black\\/30,
+        .dashboard-light .bg-black\\/10 {
+          background-color: #ffffff !important;
+        }
+
+        .dashboard-light .bg-stone-800 {
+          background-color: #f3f4f6 !important;
+        }
+
+        .dashboard-light .border-white\\/10,
+        .dashboard-light .border-white\\/5,
+        .dashboard-light .border-white\\/20 {
+          border-color: #e5e7eb !important;
+        }
+
+        .dashboard-light .text-white {
+          color: #111827 !important;
+        }
+
+        .dashboard-light .text-stone-300 {
+          color: #374151 !important;
+        }
+
+        .dashboard-light .text-stone-400 {
+          color: #6b7280 !important;
+        }
+
+        .dashboard-light .text-stone-500 {
+          color: #9ca3af !important;
+        }
+
+        .dashboard-light .text-indigo-200 {
+          color: #4f46e5 !important;
+        }
+
+        .dashboard-light .hover\\:bg-white\\/5:hover,
+        .dashboard-light .hover\\:bg-white\\/10:hover {
+          background-color: #f9fafb !important;
+        }
+
+        .dashboard-light .hover\\:text-white:hover,
+        .dashboard-light .group-focus-within\\:text-white {
+          color: #111827 !important;
+        }
+
+        .dashboard-light .focus\\:border-white\\/40:focus,
+        .dashboard-light .focus\\:border-white\\/30:focus,
+        .dashboard-light .focus\\:border-white\\/20:focus {
+          border-color: #9ca3af !important;
+        }
+
+        .dashboard-light .from-indigo-900\\/20 {
+          --tw-gradient-from: rgb(224 231 255 / 0.95) var(--tw-gradient-from-position) !important;
+          --tw-gradient-to: rgb(224 231 255 / 0) var(--tw-gradient-to-position) !important;
+          --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+        }
+
+        .dashboard-light .to-black {
+          --tw-gradient-to: #ffffff var(--tw-gradient-to-position) !important;
+        }
+      `}</style>
     </div>
   );
 };

@@ -20,6 +20,7 @@ import bookingRoutes from './routes/bookingRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import chatRoutes from './routes/chatRoutes.js'; // 👈 Your new Chat Route
 import couponRoutes from './routes/couponRoutes.js'; // 💳 Coupon Routes
+import addonRoutes from './routes/addonRoutes.js'; // ✨ Add-ons Routes
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -139,6 +140,7 @@ app.post('/api/admin-login', (req, res) => {
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', serviceRoutes);
+app.use('/api', addonRoutes); // ✨ Add-ons Routes
 app.use('/api/users', userRoutes);
 app.use('/api', chatRoutes); // 👈 Register Chat Route
 app.use('/api/coupons', couponRoutes); // 💳 Register Coupon Routes

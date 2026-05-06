@@ -73,5 +73,25 @@ export const getDashboardStats = () => api.get('/bookings/stats');
 export const createService = (serviceData) => api.post('/services', serviceData);
 export const updateService = (id, serviceData) => api.put(`/services/${id}`, serviceData);
 export const deleteService = (id) => api.delete(`/services/${id}`);
+export const uploadServiceImage = (formData) => api.post('/services/upload', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+});
+export const getAllServices = () => api.get('/services');
+
+// --- ADMIN ADD-ONS MANAGEMENT ---
+export const getAllAddons = () => api.get('/add-ons');
+export const createAddon = (addonData) => api.post('/add-ons', addonData);
+export const updateAddon = (id, addonData) => api.put(`/add-ons/${id}`, addonData);
+export const deleteAddon = (id) => api.delete(`/add-ons/${id}`);
+export const uploadAddonImage = (formData) => api.post('/add-ons/upload', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+});
+
+// --- BOOKING ADD-ONS ---
+export const getBookingAddons = (bookingId) => api.get(`/bookings/${bookingId}/add-ons`);
+export const addAddonsToBooking = (bookingId, addonIds) =>
+  api.post(`/bookings/${bookingId}/add-ons`, { addonIds });
+export const removeAddonFromBooking = (bookingId, addonId) =>
+  api.delete(`/bookings/${bookingId}/add-ons/${addonId}`);
 
 export default api;

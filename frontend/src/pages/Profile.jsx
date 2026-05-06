@@ -289,13 +289,13 @@ const Profile = () => {
         {/* --- MODALS --- */}
         {showDeleteModal && (
           <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white border border-gray-200 p-8 max-w-sm w-full mx-6 shadow-2xl animate-fadeInUp rounded-2xl">
+            <div className={`${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} border p-8 max-w-sm w-full mx-6 shadow-2xl animate-fadeInUp rounded-2xl`}>
               <div className="text-center">
-                <div className="w-16 h-16 border border-gray-200 rounded-full flex items-center justify-center mx-auto mb-6 bg-gray-50"><Trash2 className="w-6 h-6 text-red-500" /></div>
-                <h3 className="text-xl text-gray-900 font-light tracking-widest uppercase mb-2">Delete Photo?</h3>
-                <p className="text-gray-500 text-sm mb-8 font-light">Are you sure you want to remove your profile picture?</p>
+                <div className={`w-16 h-16 ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'} border rounded-full flex items-center justify-center mx-auto mb-6`}><Trash2 className="w-6 h-6 text-red-500" /></div>
+                <h3 className={`text-xl ${isDark ? 'text-white' : 'text-gray-900'} font-light tracking-widest uppercase mb-2`}>Delete Photo?</h3>
+                <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-sm mb-8 font-light`}>Are you sure you want to remove your profile picture?</p>
                 <div className="flex gap-4">
-                  <button onClick={() => setShowDeleteModal(false)} className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 text-xs font-bold uppercase tracking-widest hover:bg-gray-50 transition-colors rounded-lg">Cancel</button>
+                  <button onClick={() => setShowDeleteModal(false)} className={`flex-1 px-6 py-3 border text-xs font-bold uppercase tracking-widest transition-colors rounded-lg ${isDark ? 'border-gray-700 text-gray-200 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}>Cancel</button>
                   <button onClick={confirmDeleteImage} className="flex-1 px-6 py-3 bg-red-500 text-white text-xs font-bold uppercase tracking-widest hover:bg-red-600 transition-all rounded-lg">Delete</button>
                 </div>
               </div>
@@ -305,30 +305,30 @@ const Profile = () => {
 
         {showRescheduleModal && (
           <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white border border-gray-200 p-8 max-w-md w-full mx-6 shadow-2xl animate-fadeInUp rounded-2xl">
+            <div className={`${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} border p-8 max-w-md w-full mx-6 shadow-2xl animate-fadeInUp rounded-2xl`}>
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl text-gray-900 font-light tracking-widest uppercase">Reschedule</h3>
-                <button onClick={() => setShowRescheduleModal(false)} className="text-gray-400 hover:text-gray-900"><X className="w-5 h-5" /></button>
+                <h3 className={`text-xl ${isDark ? 'text-white' : 'text-gray-900'} font-light tracking-widest uppercase`}>Reschedule</h3>
+                <button onClick={() => setShowRescheduleModal(false)} className={`${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-900'}`}><X className="w-5 h-5" /></button>
               </div>
-              <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <p className="text-gray-500 text-xs uppercase tracking-widest mb-1">Service</p>
-                <p className="text-gray-900 text-sm font-semibold">{selectedBooking?.service_name}</p>
+              <div className={`mb-6 p-4 rounded-lg border ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-xs uppercase tracking-widest mb-1`}>Service</p>
+                <p className={`${isDark ? 'text-white' : 'text-gray-900'} text-sm font-semibold`}>{selectedBooking?.service_name}</p>
               </div>
               <form onSubmit={handleRescheduleSubmit} className="space-y-6">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">New Date</label>
-                  <input type="date" required value={newDate} onChange={(e) => setNewDate(e.target.value)} min={new Date().toISOString().split('T')[0]} className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:border-gray-400 text-sm uppercase tracking-wider" />
+                  <label className={`block text-xs font-bold ${isDark ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-widest mb-2`}>New Date</label>
+                  <input type="date" required value={newDate} onChange={(e) => setNewDate(e.target.value)} min={new Date().toISOString().split('T')[0]} className={`w-full p-4 rounded-lg focus:outline-none text-sm uppercase tracking-wider border ${isDark ? 'bg-gray-800 border-gray-700 text-white focus:border-gray-600' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400'}`} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">New Time</label>
-                  <select required value={newTime} onChange={(e) => setNewTime(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:border-gray-400 text-sm tracking-wider appearance-none">
+                  <label className={`block text-xs font-bold ${isDark ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-widest mb-2`}>New Time</label>
+                  <select required value={newTime} onChange={(e) => setNewTime(e.target.value)} className={`w-full p-4 rounded-lg focus:outline-none text-sm tracking-wider appearance-none border ${isDark ? 'bg-gray-800 border-gray-700 text-white focus:border-gray-600' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400'}`}>
                     <option value="">Select Time Slot</option>
                     {timeSlots.map((time) => (<option key={time} value={time}>{time}</option>))}
                   </select>
                 </div>
                 <div className="flex gap-4 pt-4">
-                  <button type="button" onClick={() => setShowRescheduleModal(false)} className="flex-1 py-4 border border-gray-300 text-gray-700 text-xs font-bold uppercase tracking-widest hover:bg-gray-50 transition-colors rounded-lg">Cancel</button>
-                  <button type="submit" disabled={rescheduleLoading} className="flex-1 py-4 bg-gray-900 text-white text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-all rounded-lg disabled:opacity-50">{rescheduleLoading ? 'Updating...' : 'Confirm'}</button>
+                  <button type="button" onClick={() => setShowRescheduleModal(false)} className={`flex-1 py-4 border text-xs font-bold uppercase tracking-widest transition-colors rounded-lg ${isDark ? 'border-gray-700 text-gray-200 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}>Cancel</button>
+                  <button type="submit" disabled={rescheduleLoading} className={`flex-1 py-4 text-white text-xs font-bold uppercase tracking-widest transition-all rounded-lg disabled:opacity-50 ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-900 hover:bg-gray-800'}`}>{rescheduleLoading ? 'Updating...' : 'Confirm'}</button>
                 </div>
               </form>
             </div>

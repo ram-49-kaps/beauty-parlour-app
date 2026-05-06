@@ -20,7 +20,7 @@ const ServicesPage = () => {
   const { isDark } = useTheme();
   const navigate = useNavigate();
 
-  const categories = ['all', 'Event Package', 'Standard Makeup', 'Add-On'];
+  const categories = ['all', 'Standard Makeup', 'Event Package', 'Add-On'];
 
   useEffect(() => { fetchServices(); }, []);
 
@@ -40,12 +40,6 @@ const ServicesPage = () => {
   };
 
   const handleBook = () => { user ? navigate('/booking') : navigate('/login'); };
-
-  const getServiceImage = (service) => {
-    const path = service.image_url || service.image;
-    if (!path) return 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?w=800';
-    return getImageUrl(path);
-  };
 
   const clearFilters = () => { setSearchTerm(''); setSelectedCategory('all'); setMinPrice(''); setMaxPrice(''); };
 
@@ -142,7 +136,7 @@ const ServicesPage = () => {
             {filteredServices.map((service) => (
               <div key={service.id} className={`group rounded-2xl overflow-hidden shadow-lg border transition-all hover:shadow-xl ${isDark ? 'bg-stone-900 border-white/5 hover:border-white/10' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
                 <div className="relative h-56 overflow-hidden">
-                  <img src={getServiceImage(service)} alt={service.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" />
+                  <img src={getImageUrl(service.image_url || service.image || 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?w=800')} alt={service.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                   <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/10">₹{service.price}</div>
                   {service.category && (

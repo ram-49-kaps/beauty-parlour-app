@@ -7,7 +7,8 @@ import {
   deleteService,
   addGalleryItem, // Added
   deleteGalleryItem, // Added
-  uploadServiceImage // 👈 Added
+  uploadServiceImage, // Added
+  getServiceRecommendations // Added - for city-based recommendations
 } from '../controllers/serviceController.js';
 
 import { upload } from '../middleware/uploadMiddleware.js'; // 👈 Added
@@ -21,6 +22,7 @@ const router = Router();
 // (Anyone can see services and gallery)
 router.get('/services', getAllServices);
 router.get('/gallery', getGallery); // Using renamed getGallery
+router.get('/recommendations', getServiceRecommendations); // City-based recommendations
 
 // --- Admin Routes ---
 // (Protected: User must be logged in AND be an admin)

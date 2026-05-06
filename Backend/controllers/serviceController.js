@@ -1,5 +1,10 @@
 import { query } from '../config/db.js';
 
+// ===== CACHING SYSTEM FOR RECOMMENDATIONS =====
+const recommendationCache = {}; // In-memory cache: { city: { data, timestamp } }
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes in milliseconds
+const MINIMUM_BOOKINGS = 10; // Minimum bookings to show city-specific recommendations
+
 // Get all active services
 export const getAllServices = async (req, res) => {
   try {
@@ -172,5 +177,99 @@ export const deleteGalleryItem = async (req, res) => {
   } catch (error) {
     console.error('Delete gallery error:', error);
     res.status(500).json({ message: 'Error removing item' });
+  }
+};
+
+// ===== RECOMMENDATION ENGINE WITH CACHING =====
+export const getServiceRecommendations = async (req, res) => {
+  try {
+    const { city } = req.query;
+
+    if (!city) {
+      return res.status(400).json({ message: 'City parameter is required' });
+    }
+
+    // 1. CHECK CACHE
+    const now = Date.now();
+    if (recommendationCache[city] && (now - recommendationCache[city].timestamp) < CACHE_TTL) {
+      return res.json(recommendationCache[city].data);
+    }
+
+    // 2. GET RECOMMENDATIONS FROM DATABASE
+    const recommendationsQuery = `
+      SELECT 
+        b.service_id,
+        s.name as service_name,
+        s.id,
+        COUNT(*) as booking_count,
+        RANK() OVER (ORDER BY COUNT(*) DESC) as rank
+      FROM bookings b
+      JOIN services s ON b.service_id = s.id
+      WHERE b.customer_city = ? 
+        AND b.status IN ('confirmed', 'completed')
+      GROUP BY b.service_id, s.name, s.id
+      ORDER BY booking_count DESC
+      LIMIT 10
+    `;
+
+    const cityRecommendations = await query(recommendationsQuery, [city]);
+
+    let recommendations = [];
+    if (cityRecommendations.length >= MINIMUM_BOOKINGS) {
+      // City has enough bookings - use city-specific rankings
+      recommendations = cityRecommendations.map((item, index) => ({
+        service_id: item.service_id,
+        service_name: item.service_name,
+        booking_count: item.booking_count,
+        rank: index + 1,
+        is_top: index === 0,
+        display_text: index === 0
+          ? `#1 in ${city} · ${item.booking_count} brides chose this`
+          : index <= 2
+            ? `Popular in ${city}`
+            : `#${index + 1} in ${city}`
+      }));
+    } else {
+      // City has insufficient bookings - fall back to global top services
+      const globalQuery = `
+        SELECT 
+          s.id,
+          s.name,
+          COUNT(*) as booking_count,
+          RANK() OVER (ORDER BY COUNT(*) DESC) as rank
+        FROM bookings b
+        JOIN services s ON b.service_id = s.id
+        WHERE b.status IN ('confirmed', 'completed')
+        GROUP BY s.id, s.name
+        ORDER BY booking_count DESC
+        LIMIT 3
+      `;
+
+      const globalRecs = await query(globalQuery);
+      recommendations = globalRecs.map((item, index) => ({
+        service_id: item.id,
+        service_name: item.name,
+        booking_count: item.booking_count,
+        rank: index + 1,
+        is_top: false,
+        display_text: `Trending nationwide`
+      }));
+    }
+
+    // 3. CACHE THE RESULTS (30 min TTL)
+    recommendationCache[city] = {
+      data: {
+        city,
+        recommendations,
+        updated_at: new Date().toISOString(),
+        note: recommendations.length >= MINIMUM_BOOKINGS ? 'City-specific' : 'Global fallback'
+      },
+      timestamp: now
+    };
+
+    res.json(recommendationCache[city].data);
+  } catch (error) {
+    console.error('Get recommendations error:', error);
+    res.status(500).json({ message: 'Error fetching recommendations' });
   }
 };

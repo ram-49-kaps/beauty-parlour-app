@@ -12,36 +12,49 @@ const Login = () => {
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [successName, setSuccessName] = useState('');
 
-  const googleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ access_token: tokenResponse.access_token }),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Google login failed');
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setUser(data.user);
-        setSuccessName(data.user.name);
-        setShowSuccessAnimation(true);
-        setTimeout(() => { data.user.role === 'admin' ? navigate('/dashboard') : navigate('/'); }, 3000);
-      } catch (err) { setError('Google login failed. Please try again.'); }
-    },
-    onError: () => setError('Google login failed'),
-  });
+  const validateField = (name, value) => {
+    const errors = { ...fieldErrors };
+    if (name === 'email') {
+      if (!value) errors.email = 'Email is required';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) errors.email = 'Enter a valid email address';
+      else errors.email = '';
+    } else if (name === 'password') {
+      if (!value) errors.password = 'Password is required';
+      else if (value.length < 6) errors.password = 'Password must be at least 6 characters';
+      else errors.password = '';
+    }
+    return errors;
+  };
 
-  const handleChange = (e) => { setFormData({ ...formData, [e.target.name]: e.target.value }); setError(''); };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    setError('');
+    const newErrors = validateField(name, value);
+    setFieldErrors(newErrors);
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); setError(''); setLoading(true);
-    if (!formData.email || !formData.password) { setError('Please fill in all fields'); setLoading(false); return; }
+    e.preventDefault();
+    setError('');
+    
+    // Validate all fields
+    const emailErrors = validateField('email', formData.email);
+    const passwordErrors = validateField('password', formData.password);
+    setFieldErrors({ email: emailErrors.email, password: emailErrors.password });
+    
+    if (emailErrors.email || passwordErrors.password) {
+      setError('Please fix the errors above and try again');
+      return;
+    }
+    
+    setLoading(true);
     try {
       const user = await login(formData);
       setSuccessName(user.name);
@@ -52,7 +65,7 @@ const Login = () => {
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden font-sans selection:bg-gray-900 selection:text-white ${isDark ? 'bg-stone-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`min-h-screen flex items-center justify-center pt-24 pb-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden font-sans selection:bg-gray-900 selection:text-white ${isDark ? 'bg-stone-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Background Blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className={`absolute top-0 left-0 w-[500px] h-[500px] rounded-full filter blur-[120px] opacity-30 ${isDark ? 'bg-white/5' : 'bg-rose-100'}`}></div>
@@ -95,11 +108,10 @@ const Login = () => {
               <div className="relative group">
                 <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${isDark ? 'text-stone-500 group-focus-within:text-white' : 'text-gray-400 group-focus-within:text-gray-900'}`} />
                 <input type="email" name="email" value={formData.email} onChange={handleChange}
-                  className={`w-full pl-12 pr-4 py-4 rounded-xl focus:outline-none transition-all text-sm tracking-wide border ${isDark
-                    ? 'bg-stone-950 border-white/10 focus:border-white/30 text-white placeholder-stone-600'
-                    : 'bg-gray-50 border-gray-200 focus:border-gray-400 text-gray-900 placeholder-gray-400'}`}
+                  className={`w-full pl-12 pr-4 py-4 rounded-xl focus:outline-none transition-all text-sm tracking-wide border ${fieldErrors.email ? (isDark ? 'border-red-500/50 bg-red-500/10' : 'border-red-300 bg-red-50') : (isDark ? 'bg-stone-950 border-white/10 focus:border-white/30 text-white placeholder-stone-600' : 'bg-gray-50 border-gray-200 focus:border-gray-400 text-gray-900 placeholder-gray-400')}`}
                   placeholder="NAME@EXAMPLE.COM" required />
               </div>
+              {fieldErrors.email && <p className="text-red-500 text-xs font-light mt-1 ml-1">{fieldErrors.email}</p>}
             </div>
 
             <div className="space-y-2">
@@ -107,15 +119,14 @@ const Login = () => {
               <div className="relative group">
                 <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${isDark ? 'text-stone-500 group-focus-within:text-white' : 'text-gray-400 group-focus-within:text-gray-900'}`} />
                 <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange}
-                  className={`w-full pl-12 pr-12 py-4 rounded-xl focus:outline-none transition-all text-sm tracking-wide border ${isDark
-                    ? 'bg-stone-950 border-white/10 focus:border-white/30 text-white placeholder-stone-600'
-                    : 'bg-gray-50 border-gray-200 focus:border-gray-400 text-gray-900 placeholder-gray-400'}`}
+                  className={`w-full pl-12 pr-12 py-4 rounded-xl focus:outline-none transition-all text-sm tracking-wide border ${fieldErrors.password ? (isDark ? 'border-red-500/50 bg-red-500/10' : 'border-red-300 bg-red-50') : (isDark ? 'bg-stone-950 border-white/10 focus:border-white/30 text-white placeholder-stone-600' : 'bg-gray-50 border-gray-200 focus:border-gray-400 text-gray-900 placeholder-gray-400')}`}
                   placeholder="••••••••" required />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                   className={`absolute right-4 top-1/2 -translate-y-1/2 transition-colors ${isDark ? 'text-stone-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}>
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              {fieldErrors.password && <p className="text-red-500 text-xs font-light mt-1 ml-1">{fieldErrors.password}</p>}
             </div>
 
             <div className="flex justify-between items-center">

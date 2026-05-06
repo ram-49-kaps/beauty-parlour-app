@@ -60,11 +60,47 @@ export const getBookedSlots = async (req, res) => {
 // --------------------- CREATE RAZORPAY ORDER (Step 1) ---------------------
 export const createPaymentOrder = async (req, res) => {
   try {
-    const { customer_name, customer_email, customer_phone, service_id, booking_date, booking_time, notes, user_id, coupon_code, add_on_ids } = req.body;
+    const { customer_name, customer_email, customer_phone, customer_city, service_id, booking_date, booking_time, notes, user_id, coupon_code, add_on_ids } = req.body;
 
     // 1. Input Validation
     if (!customer_name || !customer_email || !service_id || !booking_date || !booking_time) {
       return res.status(400).json({ message: 'Missing required fields: name, email, service, date, or time.' });
+    }
+
+    // 1a. Validate Name (2-100 chars, no special characters)
+    const trimmedName = customer_name.trim();
+    if (trimmedName.length < 2 || trimmedName.length > 100) {
+      return res.status(400).json({ message: 'Name must be between 2 and 100 characters.' });
+    }
+
+    // 1b. Validate Email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customer_email)) {
+      return res.status(400).json({ message: 'Please provide a valid email address.' });
+    }
+
+    // 1c. Validate Phone (10 digits)
+    if (!customer_phone || !/^[0-9]{10}$/.test(customer_phone)) {
+      return res.status(400).json({ message: 'Please provide a valid 10-digit phone number.' });
+    }
+
+    // 1d. Validate City
+    const validCities = ['Surat', 'Mumbai', 'Ahmedabad', 'Vadodara', 'Bharuch', 'Rajkot', 'Pune', 'Delhi', 'Bengaluru', 'Other'];
+    if (!customer_city || !validCities.includes(customer_city)) {
+      return res.status(400).json({ message: 'Please select a valid city.' });
+    }
+
+    // 1e. Validate Date (must be today or future)
+    const bookingDateObj = new Date(booking_date);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    if (isNaN(bookingDateObj.getTime()) || bookingDateObj < todayStart) {
+      return res.status(400).json({ message: 'Booking date must be today or a future date.' });
+    }
+
+    // 1f. Validate Time format (HH:MM)
+    if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(booking_time)) {
+      return res.status(400).json({ message: 'Please provide a valid booking time.' });
     }
 
     // 2. Get service details
@@ -214,6 +250,7 @@ export const verifyPaymentAndBook = async (req, res) => {
       customer_name,
       customer_email,
       customer_phone,
+      customer_city,
       service_id,
       booking_date,
       booking_time,
@@ -258,13 +295,13 @@ export const verifyPaymentAndBook = async (req, res) => {
     }
 
     const result = await query(
-      `INSERT INTO bookings (customer_name, customer_email, customer_phone, service_id, 
+      `INSERT INTO bookings (customer_name, customer_email, customer_phone, customer_city, service_id, 
        booking_date, booking_time, notes, total_amount, discount_amount, coupon_code,
        advance_amount, remaining_amount, payment_status,
        razorpay_order_id, razorpay_payment_id, status, user_id) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        customer_name, customer_email, bookingPhone, service_id,
+        customer_name, customer_email, bookingPhone, customer_city, service_id,
         booking_date, booking_time, finalNotes, total_amount, discount_amount, coupon_code || null,
         advance_amount, remaining_amount, 'advance_paid',
         razorpay_order_id, razorpay_payment_id, 'pending', registeredUserId

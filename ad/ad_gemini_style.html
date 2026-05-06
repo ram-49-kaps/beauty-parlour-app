@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>Flawless By Drashti — Premium Promo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --primary: #f5576c; 
+            --primary-light: #f093fb;
+            --primary-dark: #d946ef;
+            --bg: #000000; 
+            --text: #ffffff; 
+            --glow: rgba(245, 87, 108, 0.4); 
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; overflow: hidden; width: 1920px; height: 1080px; display: flex; justify-content: center; align-items: center; }
+        .scene { position: absolute; width: 100%; height: 100%; display: none; flex-direction: column; justify-content: center; align-items: center; opacity: 0; transform: scale(0.98); transition: opacity 0.5s ease-in-out, transform 0.5s ease-out; text-align: center; padding: 20px; }
+        .scene.active { display: flex; opacity: 1; transform: scale(1); }
+        
+        .logo-img { width: 450px; filter: drop-shadow(0 0 40px var(--glow)); border-radius: 50%; border: 2px solid var(--primary); padding: 10px; background: rgba(0,0,0,0.5); }
+        
+        .search-container { width: 80%; max-width: 1200px; background: rgba(255, 255, 255, 0.05); border-radius: 60px; padding: 30px 50px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 0 40px var(--glow); display: flex; align-items: center; }
+        .search-input { background: none; border: none; color: #fff; width: 100%; font-size: 42px; outline: none; font-family: 'Poppins', sans-serif; }
+        .search-input::placeholder { color: rgba(255, 255, 255, 0.4); }
+        
+        .spinner { width: 120px; height: 120px; border: 6px solid rgba(245, 87, 108, 0.1); border-top: 6px solid var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; filter: drop-shadow(0 0 20px var(--primary)); }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        /* Real Website Screenshots */
+        .showcase { display: flex; align-items: center; justify-content: center; gap: 40px; }
+        .screenshot { width: 700px; height: 420px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 30px 80px rgba(0,0,0,0.8), 0 0 40px var(--glow); object-fit: cover; object-position: top; }
+        
+        .screenshot-1 { transform: perspective(1000px) rotateY(10deg); animation: float1 4s ease-in-out infinite; }
+        .screenshot-2 { transform: perspective(1000px) rotateY(-10deg); animation: float2 4s ease-in-out infinite; }
+
+        @keyframes float1 { 0%, 100% { transform: perspective(1000px) rotateY(10deg) translateY(0); } 50% { transform: perspective(1000px) rotateY(10deg) translateY(-15px); } }
+        @keyframes float2 { 0%, 100% { transform: perspective(1000px) rotateY(-10deg) translateY(0); } 50% { transform: perspective(1000px) rotateY(-10deg) translateY(-15px); } }
+        
+        .coupon-box { font-size: 80px; font-weight: 700; color: var(--primary); border: 4px dashed var(--primary); padding: 30px 60px; border-radius: 20px; margin: 40px 0; letter-spacing: 8px; font-family: monospace; background: rgba(0,0,0,0.8); }
+        .cta-button { background: linear-gradient(45deg, var(--primary-light), var(--primary)); color: white; padding: 24px 70px; border-radius: 100px; font-size: 32px; font-weight: 600; text-decoration: none; box-shadow: 0 15px 30px rgba(245, 87, 108, 0.3); transition: transform 0.2s; letter-spacing: 4px;}
+        .cta-button:hover { transform: translateY(-4px); }
+
+        .watermark { position: fixed; bottom: 30px; right: 40px; font-size: 24px; font-weight: 700; color: rgba(255, 255, 255, 0.2); letter-spacing: 2px; z-index: 100; font-family: 'Playfair Display', serif;}
+    </style>
+</head>
+<body>
+    <div class="watermark">Flawless By Drashti</div>
+
+    <!-- SCENE 1: LOGO -->
+    <div id="scene-1" class="scene">
+        <img src="logo.png" alt="Flawless Logo" class="logo-img">
+    </div>
+    
+    <!-- SCENE 2: SEARCH / CHAT -->
+    <div id="scene-2" class="scene">
+        <div class="search-container">
+            <input type="text" id="search-input" class="search-input" placeholder="Message Lily (AI) or search services..." readonly>
+            <span style="font-size: 42px; opacity: 0.5;">✨</span>
+        </div>
+    </div>
+
+    <!-- SCENE 3: SPINNER -->
+    <div id="scene-3" class="scene">
+        <div class="spinner"></div>
+        <p style="margin-top: 40px; opacity: 0.9; font-size: 36px; font-family: 'Playfair Display', serif;">Lily is finding your perfect look...</p>
+    </div>
+
+    <!-- SCENE 4: REAL WEBSITE SCREENSHOTS -->
+    <div id="scene-4" class="scene">
+        <h2 style="font-size: 48px; font-family: 'Playfair Display', serif; margin-bottom: 50px;">✨ Book manually on our website</h2>
+        <div class="showcase">
+            <img src="screenshots/services.png" class="screenshot screenshot-1" alt="Services">
+            <img src="screenshots/booking.png" class="screenshot screenshot-2" alt="Booking">
+        </div>
+    </div>
+
+    <!-- SCENE 5: COUPON -->
+    <div id="scene-5" class="scene" style="background: url('screenshots/coupon.png') center/cover; position: relative;">
+        <!-- Dark overlay to make coupon pop -->
+        <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index: -1;"></div>
+        
+        <h2 style="font-size: 48px; font-family: 'Playfair Display', serif;">Don't forget your discount</h2>
+        <div class="coupon-box" id="coupon-text"></div>
+        <p style="font-size: 36px; color: #4ade80;" id="coupon-success"></p>
+    </div>
+
+    <!-- SCENE 6: CTA -->
+    <div id="scene-6" class="scene">
+        <h1 style="font-size: 80px; margin-bottom: 20px; font-family: 'Playfair Display', serif;">Your <span style="background: var(--pink-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Beauty Journey</span><br>Starts Here</h1>
+        <a href="#" class="cta-button" style="margin-top: 40px; display: inline-block;">BOOK NOW →</a>
+        <p style="margin-top: 40px; opacity: 0.6; font-size: 28px; letter-spacing: 6px;">FLAWLESSBYDRASHTI.IN</p>
+    </div>
+
+    <script>
+        // Timings optimized for exactly 15 seconds total duration
+        const scenes = [
+            { id: 'scene-1', duration: 1500 }, // Logo
+            { id: 'scene-2', duration: 2500 }, // Search typing
+            { id: 'scene-3', duration: 1500 }, // Loading
+            { id: 'scene-4', duration: 3000 }, // Real Screenshots
+            { id: 'scene-5', duration: 2500 }, // Coupon
+            { id: 'scene-6', duration: 4000 }  // Final CTA
+        ];
+
+        async function typeText(el, txt, speed = 40) {
+            el.placeholder = "";
+            for (const c of txt) {
+                if(el.tagName === 'INPUT') el.value += c;
+                else el.innerText += c;
+                await new Promise(r => setTimeout(r, speed));
+            }
+        }
+
+        async function runAd() {
+            for (let i = 0; i < scenes.length; i++) {
+                const s = scenes[i];
+                const el = document.getElementById(s.id);
+                
+                // Show Scene
+                el.style.display = 'flex';
+                await new Promise(r => setTimeout(r, 20)); // Trigger reflow
+                el.classList.add('active');
+
+                // Scene specific animations
+                if (s.id === 'scene-2') {
+                    await new Promise(r => setTimeout(r, 400));
+                    await typeText(document.getElementById('search-input'), "Hi Lily, I need bridal makeup for my wedding", 35);
+                }
+                
+                if (s.id === 'scene-5') {
+                    await new Promise(r => setTimeout(r, 400));
+                    await typeText(document.getElementById('coupon-text'), "WELCOME5", 100);
+                    await new Promise(r => setTimeout(r, 300));
+                    document.getElementById('coupon-success').innerHTML = "✓ 5% Discount Applied Successfully!";
+                }
+
+                // Wait duration
+                await new Promise(r => setTimeout(r, s.d || s.duration));
+
+                // Hide Scene (unless it's the last one)
+                if (i < scenes.length - 1) {
+                    el.classList.remove('active');
+                    await new Promise(r => setTimeout(r, 500)); // Fade out duration
+                    el.style.display = 'none';
+                }
+            }
+        }
+
+        window.onload = runAd;
+    </script>
+</body>
+</html>

@@ -120,8 +120,6 @@ const Layout = ({ children }) => {
     </div>
   );
 };
-import MaintenancePage from './pages/MaintenancePage';
-
 function App() {
   const [showSplash, setShowSplash] = useState(true);
 
@@ -131,7 +129,35 @@ function App() {
 
   return (
     <ThemeProvider>
-      <MaintenancePage />
+    <AuthProvider>
+      <Router>
+        <Layout>
+          {/* Suspense shows LoadingScreen while the lazy chunk is downloading */}
+          <React.Suspense fallback={<LoadingScreen />}>
+            <Routes>
+              {/* Load Homepage normally or lazy (Lazy is fine if above the fold is managed, but let's stick to consistent lazy for now to split bundles) */}
+              <Route path="/" element={<Homepage />} />
+              <Route path="/services" element={<ServicesPage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
+
+              {/* 🔐 THE SECRET ROUTE */}
+              <Route path={SECRET_ADMIN_URL} element={<AdminLogin />} />
+
+              <Route path="/booking" element={<CustomerRoute><BookingPage /></CustomerRoute>} />
+              <Route path="/profile" element={<CustomerRoute><Profile /></CustomerRoute>} />
+              <Route path="/admin-dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
+
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </React.Suspense>
+        </Layout>
+      </Router>
+    </AuthProvider>
     </ThemeProvider>
   );
 }

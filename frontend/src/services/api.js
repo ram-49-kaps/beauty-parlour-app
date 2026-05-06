@@ -34,6 +34,7 @@ export const deleteProfileImage = () => api.delete('/users/profile-image');
 
 // --- BOOKING APIS (Fixed 404 Errors) ---
 export const getServices = () => api.get('/services');
+export const getServiceRecommendations = (city) => api.get(`/recommendations?city=${city}`);
 export const createBooking = (bookingData) => api.post('/bookings', bookingData);
 
 // 💳 Razorpay Payment APIs

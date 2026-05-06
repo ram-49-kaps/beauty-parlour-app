@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, Mail, Phone, User, MessageSquare, CheckCircle, Sparkles, ArrowRight, IndianRupee, Plus, Check, Tag, Gift, ShieldCheck, Timer, AlertCircle, FileDown } from 'lucide-react';
 import { generateReceipt } from '../utils/receiptGenerator';
-import { getServices, createPaymentOrder, verifyPayment, getBookedSlots, validateCoupon, checkCouponEligibility } from '../services/api';
+import { getServices, createPaymentOrder, verifyPayment, getBookedSlots, validateCoupon, checkCouponEligibility, getServiceRecommendations } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import toast, { Toaster } from 'react-hot-toast';
@@ -22,6 +22,9 @@ const BookingPage = () => {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponEligible, setCouponEligible] = useState(null);
   const [showCoupon, setShowCoupon] = useState(false);
+  const [recommendations, setRecommendations] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
   const { user } = useAuth();
   const { isDark } = useTheme();
@@ -31,12 +34,78 @@ const BookingPage = () => {
     customer_name: user?.name || '',
     customer_email: user?.email || '',
     customer_phone: '',
+    customer_city: '',
     service_id: '',
     booking_date: '',
     booking_time: '',
     notes: ''
   });
 
+  const citiesList = ['Surat', 'Mumbai', 'Ahmedabad', 'Vadodara', 'Bharuch', 'Rajkot', 'Pune', 'Delhi', 'Bengaluru', 'Other'];
+
+  // ===== FIELD-LEVEL VALIDATION =====
+  const validateField = (name, value) => {
+    switch (name) {
+      case 'customer_name':
+        if (!value?.trim()) return 'Name is required';
+        if (value.trim().length < 2) return 'Name must be at least 2 characters';
+        if (value.trim().length > 100) return 'Name must be under 100 characters';
+        return '';
+      case 'customer_email':
+        if (!value) return 'Email is required';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Enter a valid email address';
+        return '';
+      case 'customer_phone':
+        if (!value) return 'Phone number is required';
+        if (!/^[0-9]{10}$/.test(value)) return 'Enter a valid 10-digit phone number';
+        return '';
+      case 'customer_city':
+        if (!value) return 'Please select your city';
+        return '';
+      case 'service_id':
+        if (!value) return 'Please select a service';
+        return '';
+      case 'booking_date': {
+        if (!value) return 'Please select a date';
+        const d = new Date(value);
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        if (isNaN(d.getTime())) return 'Invalid date';
+        if (d < today) return 'Date must be today or later';
+        return '';
+      }
+      case 'booking_time':
+        if (!value) return 'Please select a time slot';
+        return '';
+      default:
+        return '';
+    }
+  };
+
+  const validateAllFields = () => {
+    const errors = {};
+    const fields = ['customer_name', 'customer_email', 'customer_phone', 'customer_city', 'service_id', 'booking_date', 'booking_time'];
+    fields.forEach(f => {
+      const err = validateField(f, formData[f]);
+      if (err) errors[f] = err;
+    });
+    return errors;
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+    setFieldErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    setError('');
+    // Only clear the field error if user already touched this field
+    if (touched[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
+    }
+  };
   useEffect(() => {
     if (!user) navigate('/');
   }, [user, navigate]);
@@ -61,6 +130,25 @@ const BookingPage = () => {
       const res = await checkCouponEligibility();
       if (res.data.eligible) setCouponEligible(res.data.coupon);
     } catch (e) { console.error('Coupon check failed', e); }
+  };
+
+  const fetchRecommendations = async (city) => {
+    if (!city) return;
+    try {
+      const res = await getServiceRecommendations(city);
+      if (res.data.recommendations) {
+        const recMap = {};
+        res.data.recommendations.forEach(rec => {
+          recMap[rec.service_id] = {
+            display_text: rec.display_text,
+            booking_count: rec.booking_count,
+            is_top: rec.is_top,
+            rank: rec.rank
+          };
+        });
+        setRecommendations(recMap);
+      }
+    } catch (e) { console.error('Error fetching recommendations:', e); }
   };
 
   const fetchServices = async () => {
@@ -88,6 +176,12 @@ const BookingPage = () => {
       setBlockedTimes([]);
     }
   }, [formData.booking_date]);
+
+  useEffect(() => {
+    if (formData.customer_city) {
+      fetchRecommendations(formData.customer_city);
+    }
+  }, [formData.customer_city]);
 
   const fetchBlockedSlots = async (date) => {
     try {
@@ -155,44 +249,29 @@ const BookingPage = () => {
 
   const removeCoupon = () => { setCouponApplied(null); setCouponCode(''); setCouponError(''); toast('Coupon removed', { icon: '🗑️' }); };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError('');
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    if (!formData.customer_name || !formData.customer_email || !formData.customer_phone ||
-      !formData.service_id || !formData.booking_date || !formData.booking_time) {
-      setError('Please fill in all required fields');
-      setLoading(false);
-      return;
-    }
+    // Mark all fields as touched to show errors
+    const allTouched = {};
+    ['customer_name', 'customer_email', 'customer_phone', 'customer_city', 'service_id', 'booking_date', 'booking_time'].forEach(f => { allTouched[f] = true; });
+    setTouched(allTouched);
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.customer_email)) {
-      setError('Please enter a valid email address');
-      setLoading(false);
-      return;
-    }
+    // Validate all fields
+    const errors = validateAllFields();
+    setFieldErrors(errors);
 
-    const phoneRegex = /^[0-9]{10}$/;
-    if (!phoneRegex.test(formData.customer_phone)) {
-      setError('Please enter a valid 10-digit phone number');
+    if (Object.keys(errors).length > 0) {
+      const firstError = Object.values(errors)[0];
+      setError(firstError);
+      toast.error(firstError, { duration: 3000 });
       setLoading(false);
-      return;
-    }
-
-    const selectedDate = new Date(formData.booking_date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (selectedDate < today) {
-      setError('Please select a future date');
-      setLoading(false);
+      // Scroll to first error field
+      const firstField = Object.keys(errors)[0];
+      const el = document.querySelector(`[name="${firstField}"]`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
@@ -252,7 +331,8 @@ const BookingPage = () => {
             };
             setLastBooking(bookingData);
             setSuccess(true);
-            setFormData({ customer_name: user?.name || '', customer_email: user?.email || '', customer_phone: '', service_id: '', booking_date: '', booking_time: '', notes: '' });
+            setFormData({ customer_name: user?.name || '', customer_email: user?.email || '', customer_phone: '', customer_city: '', service_id: '', booking_date: '', booking_time: '', notes: '' });
+            setFieldErrors({}); setTouched({});
             setSelectedAddOns([]); setCouponApplied(null); setCouponCode('');
             window.scrollTo({ top: 0, behavior: 'smooth' });
             setTimeout(() => setSuccess(false), 30000);
@@ -379,10 +459,12 @@ const BookingPage = () => {
                     name="customer_name"
                     value={formData.customer_name}
                     onChange={handleChange}
-                    className={`w-full px-4 py-4 border rounded-xl focus:outline-none placeholder-gray-400 transition-all text-sm tracking-wide ${isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400'}`}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-4 border rounded-xl focus:outline-none placeholder-gray-400 transition-all text-sm tracking-wide ${fieldErrors.customer_name && touched.customer_name ? (isDark ? 'border-red-500/50 bg-red-500/10' : 'border-red-300 bg-red-50') : (isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400')}`}
                     placeholder="ENTER YOUR NAME"
                     required
                   />
+                  {fieldErrors.customer_name && touched.customer_name && <p className="text-red-500 text-xs font-light mt-1 ml-1">{fieldErrors.customer_name}</p>}
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6">
@@ -397,11 +479,13 @@ const BookingPage = () => {
                         name="customer_email"
                         value={formData.customer_email}
                         onChange={handleChange}
-                        className={`w-full pl-12 pr-4 py-4 border rounded-xl focus:outline-none placeholder-gray-400 transition-all text-sm tracking-wide ${isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400'}`}
+                        onBlur={handleBlur}
+                        className={`w-full pl-12 pr-4 py-4 border rounded-xl focus:outline-none placeholder-gray-400 transition-all text-sm tracking-wide ${fieldErrors.customer_email && touched.customer_email ? (isDark ? 'border-red-500/50 bg-red-500/10' : 'border-red-300 bg-red-50') : (isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400')}`}
                         placeholder="email@example.com"
                         required
                       />
                     </div>
+                    {fieldErrors.customer_email && touched.customer_email && <p className="text-red-500 text-xs font-light mt-1 ml-1">{fieldErrors.customer_email}</p>}
                   </div>
 
                   <div>
@@ -415,12 +499,41 @@ const BookingPage = () => {
                         name="customer_phone"
                         value={formData.customer_phone}
                         onChange={handleChange}
-                        className={`w-full pl-12 pr-4 py-4 border rounded-xl focus:outline-none placeholder-gray-400 transition-all text-sm tracking-wide ${isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400'}`}
+                        onBlur={handleBlur}
+                        className={`w-full pl-12 pr-4 py-4 border rounded-xl focus:outline-none placeholder-gray-400 transition-all text-sm tracking-wide ${fieldErrors.customer_phone && touched.customer_phone ? (isDark ? 'border-red-500/50 bg-red-500/10' : 'border-red-300 bg-red-50') : (isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400')}`}
                         placeholder="9876543210"
                         pattern="[0-9]{10}"
                         required
                       />
                     </div>
+                    {fieldErrors.customer_phone && touched.customer_phone && <p className="text-red-500 text-xs font-light mt-1 ml-1">{fieldErrors.customer_phone}</p>}
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ml-1 ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
+                      City <span className={isDark ? 'text-white' : 'text-gray-900'}>*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        name="customer_city"
+                        value={formData.customer_city}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        className={`w-full px-4 py-4 border rounded-xl focus:outline-none appearance-none cursor-pointer text-sm tracking-wide ${fieldErrors.customer_city && touched.customer_city ? (isDark ? 'border-red-500/50 bg-red-500/10' : 'border-red-300 bg-red-50') : (isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400')}`}
+                        required
+                      >
+                        <option value="">SELECT YOUR CITY</option>
+                        {citiesList.map((city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                      </div>
+                    </div>
+                    {fieldErrors.customer_city && touched.customer_city && <p className="text-red-500 text-xs font-light mt-1 ml-1">{fieldErrors.customer_city}</p>}
                   </div>
                 </div>
               </div>
@@ -443,27 +556,40 @@ const BookingPage = () => {
                     name="service_id"
                     value={formData.service_id}
                     onChange={handleChange}
-                    className={`w-full px-4 py-4 border rounded-xl focus:outline-none appearance-none cursor-pointer text-sm tracking-wide ${isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400'}`}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-4 border rounded-xl focus:outline-none appearance-none cursor-pointer text-sm tracking-wide ${fieldErrors.service_id && touched.service_id ? (isDark ? 'border-red-500/50 bg-red-500/10' : 'border-red-300 bg-red-50') : (isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400')}`}
                     required
                   >
                     <option value="">SELECT A TREATMENT</option>
-                    {mainServices.map((service) => (
-                      <option key={service.id} value={service.id}>
-                        {service.name} (₹{service.price})
-                      </option>
-                    ))}
+                    {mainServices.map((service) => {
+                      const rec = recommendations[service.id];
+                      const label = rec ? `${service.name} (₹${service.price}) - ${rec.display_text}` : `${service.name} (₹${service.price})`;
+                      return (
+                        <option key={service.id} value={service.id}>
+                          {label}
+                        </option>
+                      );
+                    })}
                   </select>
                   <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
                     <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                   </div>
                 </div>
+                {fieldErrors.service_id && touched.service_id && <p className="text-red-500 text-xs font-light mt-1 ml-1">{fieldErrors.service_id}</p>}
               </div>
 
               {/* SELECTED MAIN SERVICE INFO */}
               {selectedMainService && (
                 <div className={`p-6 rounded-xl border animate-fadeInUp flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${isDark ? 'bg-stone-800 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
-                  <div>
-                    <h3 className={`text-lg font-light mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedMainService.name}</h3>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className={`text-lg font-light ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedMainService.name}</h3>
+                      {recommendations[selectedMainService.id] && (
+                        <span className={`text-xs font-bold px-3 py-1 rounded-full ${recommendations[selectedMainService.id].is_top ? (isDark ? 'bg-red-600 text-white' : 'bg-red-100 text-red-900') : (isDark ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-900')}`}>
+                          {recommendations[selectedMainService.id].display_text}
+                        </span>
+                      )}
+                    </div>
                     <p className={`text-xs font-light tracking-wide ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>{selectedMainService.description}</p>
                   </div>
                   <div className={`flex items-center gap-6 border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-6 w-full md:w-auto mt-2 md:mt-0 ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
@@ -528,11 +654,13 @@ const BookingPage = () => {
                       name="booking_date"
                       value={formData.booking_date}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       min={todayStr}
-                      className={`w-full pl-12 pr-4 py-4 border rounded-xl focus:outline-none placeholder-gray-400 transition-all text-sm tracking-wide uppercase ${isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400'}`}
+                      className={`w-full pl-12 pr-4 py-4 border rounded-xl focus:outline-none placeholder-gray-400 transition-all text-sm tracking-wide uppercase ${fieldErrors.booking_date && touched.booking_date ? (isDark ? 'border-red-500/50 bg-red-500/10' : 'border-red-300 bg-red-50') : (isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400')}`}
                       required
                     />
                   </div>
+                  {fieldErrors.booking_date && touched.booking_date && <p className="text-red-500 text-xs font-light mt-1 ml-1">{fieldErrors.booking_date}</p>}
                 </div>
 
                 <div>
@@ -548,7 +676,7 @@ const BookingPage = () => {
                           key={time}
                           type="button"
                           disabled={isBlocked}
-                          onClick={() => setFormData({ ...formData, booking_time: time })}
+                          onClick={() => { setFormData({ ...formData, booking_time: time }); setFieldErrors(prev => ({ ...prev, booking_time: '' })); setTouched(prev => ({ ...prev, booking_time: true })); }}
                           className={`
                             py-3 text-sm font-medium rounded-lg border transition-all duration-200
                             ${isBlocked
@@ -564,6 +692,7 @@ const BookingPage = () => {
                       );
                     })}
                   </div>
+                  {fieldErrors.booking_time && touched.booking_time && <p className="text-red-500 text-xs font-light mt-2 ml-1">{fieldErrors.booking_time}</p>}
                 </div>
               </div>
 
@@ -694,6 +823,9 @@ const BookingPage = () => {
               <span className={`mt-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>•</span>
               <span>New customers can use coupon code <strong>WELCOME5</strong> for a 5% discount on their first booking!</span>
             </div>
+          </div>
+          <div className={`mt-6 pt-4 border-t text-center text-[11px] tracking-widest uppercase font-semibold ${isDark ? 'border-white/10 text-stone-500' : 'border-gray-200 text-gray-400'}`}>
+            📊 Service rankings updated daily based on real bookings
           </div>
         </div>
       </div>

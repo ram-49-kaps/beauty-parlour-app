@@ -28,6 +28,8 @@ booking_db.sql
 *.sql
 *.log
 npm-debug.log*
+ad/
+Screen Recording*.mov
 
 # IDEs
 .vscode/

@@ -1004,6 +1004,7 @@ const Dashboard = () => {
                 <div><label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block mb-2">Duration</label><input required type="number" value={serviceFormData.duration} onChange={e => setServiceFormData({ ...serviceFormData, duration: e.target.value })} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-white/30" /></div>
               </div>
 
+              {serviceFormData.category !== 'Add-On' && (
               <div>
                 <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block mb-2">Service Image</label>
                 <div className="flex flex-col gap-3">
@@ -1044,6 +1045,7 @@ const Dashboard = () => {
                   </div>
                 </div>
               </div>
+              )}
 
               <div><label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block mb-2">Description</label><textarea required rows="3" value={serviceFormData.description} onChange={e => setServiceFormData({ ...serviceFormData, description: e.target.value })} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-white/30"></textarea></div>
               <div className="flex gap-3 pt-4">

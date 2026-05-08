@@ -23,7 +23,7 @@ export const getAllServices = async (req, res) => {
 // Create a new salon service
 export const createService = async (req, res) => {
   try {
-    const { name, description, duration, price, image_url } = req.body;
+    const { name, description, duration, price, image_url, category } = req.body;
 
     // 1. INPUT VALIDATION
     if (!name || !duration || !price) {
@@ -33,14 +33,15 @@ export const createService = async (req, res) => {
     // 2. Handle optional fields (undefined -> null)
     const serviceDescription = description === undefined ? null : description;
     const serviceImageUrl = image_url === undefined ? null : image_url;
+    const serviceCategory = category === undefined ? null : category;
 
     // Type conversion
     const serviceDuration = parseInt(duration);
     const servicePrice = parseFloat(price);
 
     const result = await query(
-      'INSERT INTO services (name, description, duration, price, image_url) VALUES (?, ?, ?, ?, ?)',
-      [name, serviceDescription, serviceDuration, servicePrice, serviceImageUrl]
+      'INSERT INTO services (name, description, duration, price, image_url, category) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, serviceDescription, serviceDuration, servicePrice, serviceImageUrl, serviceCategory]
     );
 
     res.status(201).json({
@@ -57,7 +58,7 @@ export const createService = async (req, res) => {
 export const updateService = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, duration, price, image_url } = req.body;
+    const { name, description, duration, price, image_url, category } = req.body;
 
     // 1. INPUT VALIDATION
     if (!id) {
@@ -67,14 +68,15 @@ export const updateService = async (req, res) => {
     // 2. Handle optional fields (undefined -> null) to prevent binding errors
     const serviceDescription = description === undefined ? null : description;
     const serviceImageUrl = image_url === undefined ? null : image_url;
+    const serviceCategory = category === undefined ? null : category;
 
     // Type conversion
     const serviceDuration = duration ? parseInt(duration) : 0;
     const servicePrice = price ? parseFloat(price) : 0.00;
 
     const result = await query(
-      'UPDATE services SET name=?, description=?, duration=?, price=?, image_url=? WHERE id=?',
-      [name, serviceDescription, serviceDuration, servicePrice, serviceImageUrl, id]
+      'UPDATE services SET name=?, description=?, duration=?, price=?, image_url=?, category=? WHERE id=?',
+      [name, serviceDescription, serviceDuration, servicePrice, serviceImageUrl, serviceCategory, id]
     );
 
     if (result.affectedRows === 0) {

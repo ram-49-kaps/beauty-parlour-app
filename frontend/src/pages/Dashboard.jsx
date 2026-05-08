@@ -52,7 +52,7 @@ const Dashboard = () => {
   const [serviceToDelete, setServiceToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUploading, setIsUploading] = useState(false); // ✅ Added Upload Loading
-  const [serviceFormData, setServiceFormData] = useState({ name: '', description: '', price: '', duration: '', image_url: '' });
+  const [serviceFormData, setServiceFormData] = useState({ name: '', description: '', price: '', duration: '', image_url: '', category: '' });
 
   // --- API CALLS ---
   useEffect(() => {
@@ -798,7 +798,7 @@ const Dashboard = () => {
         {activeTab === 'services' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <div className="flex justify-end mb-6">
-              <button onClick={() => { setEditingService(null); setServiceFormData({ name: '', description: '', price: '', duration: '', image_url: '' }); setShowServiceModal(true); }} className="flex items-center gap-2 bg-white text-black px-6 py-3 md:py-2 rounded-full font-bold text-xs uppercase tracking-widest hover:bg-stone-200 transition shadow-lg w-full md:w-auto justify-center">
+              <button onClick={() => { setEditingService(null); setServiceFormData({ name: '', description: '', price: '', duration: '', image_url: '', category: '' }); setShowServiceModal(true); }} className="flex items-center gap-2 bg-white text-black px-6 py-3 md:py-2 rounded-full font-bold text-xs uppercase tracking-widest hover:bg-stone-200 transition shadow-lg w-full md:w-auto justify-center">
                 <Plus className="w-4 h-4" /> Add Service
               </button>
             </div>
@@ -807,7 +807,10 @@ const Dashboard = () => {
                 <div key={service.id} className="bg-stone-900/50 border border-white/10 rounded-2xl overflow-hidden group hover:border-white/20 transition-all">
                   <div className="h-48 overflow-hidden relative">
                     <img src={getImageUrl(service.image_url)} alt={service.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500 opacity-80 group-hover:opacity-100" />
-                    <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/10">₹{service.price}</div>
+                    <div className="absolute top-4 right-4 flex gap-2">
+                      {service.category && <span className="bg-white/20 backdrop-blur-md px-2 py-1 rounded-full text-[9px] font-bold text-white border border-white/10 uppercase tracking-wider">{service.category}</span>}
+                      <span className="bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/10">₹{service.price}</span>
+                    </div>
                   </div>
                   <div className="p-6">
                     <h3 className="text-lg font-medium text-white mb-2">{service.name}</h3>
@@ -995,6 +998,7 @@ const Dashboard = () => {
             <h3 className="text-xl font-light text-white mb-6">{editingService ? 'Edit Service' : 'Add New Service'}</h3>
             <form onSubmit={handleServiceSubmit} className="space-y-4">
               <div><label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block mb-2">Name</label><input required type="text" value={serviceFormData.name} onChange={e => setServiceFormData({ ...serviceFormData, name: e.target.value })} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-white/30" /></div>
+              <div><label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block mb-2">Category</label><select required value={serviceFormData.category} onChange={e => setServiceFormData({ ...serviceFormData, category: e.target.value })} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-white/30 cursor-pointer"><option value="">Select Category</option><option value="Event Package">🌟 Event Package</option><option value="Standard Makeup">💄 Standard Makeup</option><option value="Add-On">✨ Add-On</option></select></div>
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block mb-2">Price</label><input required type="number" value={serviceFormData.price} onChange={e => setServiceFormData({ ...serviceFormData, price: e.target.value })} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-white/30" /></div>
                 <div><label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block mb-2">Duration</label><input required type="number" value={serviceFormData.duration} onChange={e => setServiceFormData({ ...serviceFormData, duration: e.target.value })} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-white/30" /></div>

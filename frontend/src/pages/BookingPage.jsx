@@ -155,12 +155,8 @@ const BookingPage = () => {
     try {
       const response = await getServices();
       const allServices = response.data;
-      const extras = allServices.filter(s =>
-        s.name.toLowerCase().includes('lash') || s.name.toLowerCase().includes('lens')
-      );
-      const main = allServices.filter(s =>
-        !s.name.toLowerCase().includes('lash') && !s.name.toLowerCase().includes('lens')
-      );
+      const extras = allServices.filter(s => s.category === 'Add-On');
+      const main = allServices.filter(s => s.category !== 'Add-On');
       setMainServices(main);
       setAddOnServices(extras);
     } catch (error) {

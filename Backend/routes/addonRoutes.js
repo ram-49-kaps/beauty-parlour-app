@@ -5,6 +5,7 @@ import {
   updateAddon,
   deleteAddon,
   uploadAddonImage,
+  reorderAddons,
   getBookingAddons,
   addAddonsToBooking,
   removeAddonFromBooking
@@ -23,6 +24,7 @@ router.get('/bookings/:bookingId/add-ons', authenticateToken, getBookingAddons);
 router.post('/add-ons', authenticateToken, authorizeAdmin, createAddon);
 router.post('/add-ons/upload', authenticateToken, authorizeAdmin, upload.single('image'), uploadAddonImage);
 router.put('/add-ons/:id', authenticateToken, authorizeAdmin, updateAddon);
+router.put('/add-ons/reorder/update', authenticateToken, authorizeAdmin, reorderAddons);
 router.delete('/add-ons/:id', authenticateToken, authorizeAdmin, deleteAddon);
 
 // --- Booking Add-ons Routes ---

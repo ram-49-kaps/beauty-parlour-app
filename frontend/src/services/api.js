@@ -86,6 +86,7 @@ export const deleteAddon = (id) => api.delete(`/add-ons/${id}`);
 export const uploadAddonImage = (formData) => api.post('/add-ons/upload', formData, {
   headers: { 'Content-Type': 'multipart/form-data' },
 });
+export const reorderAddons = (orderedIds) => api.put('/add-ons/reorder/update', { orderedIds });
 
 // --- BOOKING ADD-ONS ---
 export const getBookingAddons = (bookingId) => api.get(`/bookings/${bookingId}/add-ons`);

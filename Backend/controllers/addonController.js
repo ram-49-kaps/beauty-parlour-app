@@ -4,7 +4,7 @@ import { query } from '../config/db.js';
 export const getAllAddons = async (req, res) => {
   try {
     const addons = await query(
-      'SELECT * FROM add_ons WHERE is_active = true ORDER BY name'
+      'SELECT * FROM add_ons WHERE is_active = true ORDER BY display_order ASC, created_at ASC'
     );
     res.json(addons);
   } catch (error) {
@@ -27,9 +27,13 @@ export const createAddon = async (req, res) => {
     const addonImageUrl = image_url === undefined ? null : image_url;
     const addonPrice = parseFloat(price);
 
+    // Get the next display_order
+    const maxOrder = await query('SELECT MAX(display_order) as max_order FROM add_ons');
+    const nextOrder = (maxOrder[0].max_order || 0) + 1;
+
     const result = await query(
-      'INSERT INTO add_ons (name, description, price, image_url) VALUES (?, ?, ?, ?)',
-      [name, addonDescription, addonPrice, addonImageUrl]
+      'INSERT INTO add_ons (name, description, price, image_url, display_order) VALUES (?, ?, ?, ?, ?)',
+      [name, addonDescription, addonPrice, addonImageUrl, nextOrder]
     );
 
     res.status(201).json({
@@ -107,7 +111,31 @@ export const uploadAddonImage = async (req, res) => {
       message: 'Image uploaded successfully',
       image_url: imageUrl
     });
+  
+
+// Reorder add-ons
+export const reorderAddons = async (req, res) => {
+  try {
+    const { orderedIds } = req.body;
+
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      return res.status(400).json({ message: 'Ordered IDs array is required' });
+    }
+
+    // Update display_order for each addon
+    for (let i = 0; i < orderedIds.length; i++) {
+      await query(
+        'UPDATE add_ons SET display_order = ? WHERE id = ?',
+        [i + 1, orderedIds[i]]
+      );
+    }
+
+    res.json({ message: 'Add-ons reordered successfully' });
   } catch (error) {
+    console.error('Reorder add-ons error:', error);
+    res.status(500).json({ message: 'Error reordering add-ons' });
+  }
+};} catch (error) {
     console.error('Add-on image upload error:', error);
     res.status(500).json({ message: 'Error uploading image' });
   }

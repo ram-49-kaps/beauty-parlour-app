@@ -593,7 +593,7 @@ const Dashboard = () => {
         </div>
 
         <div className="flex gap-4 border-b border-white/10 pb-4 overflow-x-auto no-scrollbar">
-          <button onClick={() => setActiveTab('bookings')} className={`pb-2 text-xs font-bold uppercase tracking-widest transition-colors ${activeTab === 'bookings' ? 'text-white border-b-2 border-white' : 'text-stone-500 hover:text-white'}`}>Bookings</button>
+          <button onClick={() => setActiveTab('bookings')} className={`px-4 py-2 text-sm font-bold uppercase tracking-widest transition-colors ${activeTab === 'bookings' ? 'text-white border-b-2 border-white' : 'text-stone-500 hover:text-stone-300'}`}>Bookings</button>
           {/* Services Tab */}
           <button
             onClick={() => setActiveTab('services')}

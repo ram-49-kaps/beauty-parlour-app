@@ -12,7 +12,6 @@ const Login = React.lazy(() => import('./pages/Login'));
 const Signup = React.lazy(() => import('./pages/Signup'));
 const Profile = React.lazy(() => import('./pages/Profile'));
 const AdminLogin = React.lazy(() => import('./pages/AdminLogin'));
-const AdminAddonsPanel = React.lazy(() => import('./pages/AdminAddonsPanel'));
 const TermsPage = React.lazy(() => import('./pages/TermsPage'));
 const PrivacyPage = React.lazy(() => import('./pages/PrivacyPage'));
 const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
@@ -152,7 +151,6 @@ function App() {
               <Route path="/booking" element={<CustomerRoute><BookingPage /></CustomerRoute>} />
               <Route path="/profile" element={<CustomerRoute><Profile /></CustomerRoute>} />
               <Route path="/admin-dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
-              <Route path="/admin-addons" element={<AdminRoute><AdminAddonsPanel /></AdminRoute>} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

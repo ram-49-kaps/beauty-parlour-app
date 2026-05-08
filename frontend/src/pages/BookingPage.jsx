@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Calendar, Clock, Mail, Phone, User, MessageSquare, CheckCircle, Sparkles, ArrowRight, IndianRupee, Plus, Check, Tag, Gift, ShieldCheck, Timer, AlertCircle, FileDown } from 'lucide-react';
 import { generateReceipt } from '../utils/receiptGenerator';
-import { getServices, createPaymentOrder, verifyPayment, getBookedSlots, validateCoupon, checkCouponEligibility, getServiceRecommendations } from '../services/api';
+import { getServices, createPaymentOrder, verifyPayment, getBookedSlots, validateCoupon, checkCouponEligibility, getServiceRecommendations, getBooking } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import toast, { Toaster } from 'react-hot-toast';
@@ -29,6 +29,7 @@ const BookingPage = () => {
   const { user } = useAuth();
   const { isDark } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [formData, setFormData] = useState({
     customer_name: user?.name || '',
@@ -114,7 +115,45 @@ const BookingPage = () => {
     fetchServices();
     fetchCouponEligibility();
     loadRazorpayScript();
-  }, []);
+    
+    // Check for pre-fill ID from URL
+    const params = new URLSearchParams(location.search);
+    const bookingId = params.get('id');
+    if (bookingId) {
+      prefillBooking(bookingId);
+    }
+  }, [location.search]);
+
+  const prefillBooking = async (id) => {
+    try {
+      const res = await getBooking(id);
+      if (res.data) {
+        const d = res.data;
+        
+        // Format date string to YYYY-MM-DD
+        let formattedDate = d.booking_date;
+        if (formattedDate && formattedDate.includes('T')) {
+           formattedDate = formattedDate.split('T')[0];
+        }
+
+        setFormData(prev => ({
+          ...prev,
+          customer_name: d.customer_name || prev.customer_name,
+          customer_email: d.customer_email || prev.customer_email,
+          customer_phone: d.customer_phone || prev.customer_phone,
+          customer_city: d.customer_city || prev.customer_city,
+          service_id: d.service_id || prev.service_id,
+          booking_date: formattedDate || prev.booking_date,
+          booking_time: d.booking_time || prev.booking_time,
+          notes: d.notes || prev.notes
+        }));
+        toast.success("Booking details loaded from chatbot!");
+      }
+    } catch (err) {
+      console.error("Failed to fetch booking details for prefill:", err);
+      toast.error("Failed to load booking details from the link.");
+    }
+  };
 
   const loadRazorpayScript = () => {
     if (document.getElementById('razorpay-script')) return;

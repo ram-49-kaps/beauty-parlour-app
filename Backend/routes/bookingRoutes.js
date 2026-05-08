@@ -11,7 +11,8 @@ import {
     rescheduleBooking,
     getDashboardStats,
     deleteBooking,
-    resetAllBookings
+    resetAllBookings,
+    getBookingById
 } from '../controllers/bookingController.js';
 
 // Import your auth middleware (Adjust path if yours is different)
@@ -59,5 +60,8 @@ router.delete('/:id', authenticateToken, authorizeAdmin, deleteBooking);
 
 // ⚠️ RESET DATA ROUTE
 router.delete('/actions/reset-all', authenticateToken, authorizeAdmin, resetAllBookings);
+
+// Get single booking by ID (Public so users clicking link from chat can view their own pending booking to prefill)
+router.get('/:id', getBookingById);
 
 export default router;

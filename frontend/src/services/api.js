@@ -45,6 +45,9 @@ export const verifyPayment = (paymentData) => api.post('/bookings/verify-payment
 // ✅ FIX 1: Added '/bookings' prefix (matches server.js + bookingRoutes.js)
 export const getUserBookings = () => api.get('/bookings/my-bookings');
 
+// ✅ NEW: Get Single Booking
+export const getBooking = (id) => api.get(`/bookings/${id}`);
+
 // ✅ NEW: Get Blocked Slots
 export const getBookedSlots = (date) => api.get(`/bookings/slots?date=${date}`);
 

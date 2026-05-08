@@ -616,6 +616,27 @@ export const createBooking = async (req, res) => {
   }
 };
 
+// --------------------- GET SINGLE BOOKING BY ID ---------------------
+export const getBookingById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const bookings = await query(
+      `SELECT b.id, b.customer_name, b.customer_email, b.customer_phone, b.service_id, b.booking_date, b.booking_time, b.notes, b.status 
+       FROM bookings b 
+       WHERE b.id = ?`,
+      [id]
+    );
+
+    if (bookings.length === 0) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    res.json(bookings[0]);
+  } catch (error) {
+    console.error('Get booking by ID error:', error);
+    res.status(500).json({ message: 'Error fetching booking' });
+  }
+};
 
 // --------------------- GET ALL BOOKINGS (Admin) ---------------------
 export const getAllBookings = async (req, res) => {

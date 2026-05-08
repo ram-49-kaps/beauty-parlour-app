@@ -94,8 +94,8 @@ export const uploadServiceImage = async (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    // Cloudinary returns the secure URL directly in req.file.secure_url
-    const imageUrl = req.file.secure_url;
+    // multer-storage-cloudinary maps secure_url → req.file.path
+    const imageUrl = req.file.path || req.file.secure_url;
 
     res.json({
       message: 'Image uploaded successfully',

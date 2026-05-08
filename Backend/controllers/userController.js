@@ -7,7 +7,7 @@ export const uploadProfileImage = async (req, res) => {
     }
 
     // Cloudinary returns the secure URL directly
-    const imageUrl = req.file.secure_url;
+    const imageUrl = req.file.path || req.file.secure_url;
     const userId = req.user.id;
 
     // Update Database

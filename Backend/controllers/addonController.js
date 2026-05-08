@@ -101,7 +101,7 @@ export const uploadAddonImage = async (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    const imageUrl = req.file.secure_url;
+    const imageUrl = req.file.path || req.file.secure_url;
 
     res.json({
       message: 'Image uploaded successfully',

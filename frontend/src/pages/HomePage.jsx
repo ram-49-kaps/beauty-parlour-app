@@ -34,10 +34,7 @@ const Homepage = () => {
     try {
       const response = await getServices();
       const allServices = response.data;
-      const mainServices = allServices.filter(service => {
-        const name = service.name.toLowerCase();
-        return !name.includes('lash') && !name.includes('lens');
-      });
+      const mainServices = allServices.filter(service => service.category !== 'Add-On');
       setServices(mainServices.slice(0, 3));
     } catch (error) { console.error('Error fetching services:', error); }
     finally { setLoading(false); }

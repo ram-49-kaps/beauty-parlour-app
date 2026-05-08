@@ -65,22 +65,59 @@ def get_db_connection():
 
 @tool
 def list_all_services(query: str = "") -> str:
-    """Returns a formatted list of all salon services, prices, and durations. Use this for menu/pricing questions."""
+    """Returns a formatted list of all salon services with category, price, and duration. Use this for menu/pricing questions."""
     conn = get_db_connection()
     if not conn: return "Sorry, I can't access the service list right now."
-    
+
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT name, price, duration FROM services")
+    cursor.execute(
+        "SELECT name, category, price, duration FROM services "
+        "WHERE is_active = TRUE "
+        "ORDER BY FIELD(category, 'Event Package', 'Standard Makeup', 'Add-On'), display_order ASC, name ASC"
+    )
     services = cursor.fetchall()
     cursor.close()
     conn.close()
-    
+
     if not services: return "We are currently updating our service menu. Please check back later!"
-    
-    table = "\n\n| Service Name | Price | Duration |\n| :--- | :--- | :--- |\n"
+
+    table = "\n\n| Category | Service Name | Price | Duration |\n| :--- | :--- | :--- | :--- |\n"
     for s in services:
-        table += f"| {s['name']} | ₹{s['price']} | {s['duration']} mins |\n"
+        category = s.get('category') or '—'
+        table += f"| {category} | {s['name']} | ₹{s['price']} | {s['duration']} mins |\n"
     return table
+
+@tool
+def check_discount(query: str = "") -> str:
+    """Returns currently active discount/coupon codes (e.g. WELCOME5 for first-time customers). Use whenever the guest asks about offers, discounts, deals, promo codes, or savings."""
+    conn = get_db_connection()
+    if not conn:
+        return "Sorry, I can't reach the offers system right now. Please check back shortly."
+
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            "SELECT code, discount_percent, is_new_user_only "
+            "FROM coupons WHERE is_active = TRUE"
+        )
+        coupons = cursor.fetchall()
+    except Exception as e:
+        cursor.close()
+        conn.close()
+        return f"Could not load offers: {str(e)}"
+
+    cursor.close()
+    conn.close()
+
+    if not coupons:
+        return "There are no active offers at the moment. Please ask again soon!"
+
+    lines = ["Current active offers:"]
+    for c in coupons:
+        eligibility = "first-time customers only" if c.get('is_new_user_only') else "all guests"
+        lines.append(f"- **{c['code']}** — {c['discount_percent']}% off ({eligibility})")
+    lines.append("\nApply your code on the booking page at checkout: https://flawlessbydrashti.in/booking")
+    return "\n".join(lines)
 
 @tool
 def search_salon_info(query: str = "") -> str:
@@ -177,7 +214,7 @@ def get_booking_details(booking_id: str) -> str:
     if not booking: return f"I couldn't find any booking with ID {booking_id}."
     return json.dumps(booking, default=str)
 
-tools = [list_all_services, search_salon_info, check_availability, create_booking, get_booking_details]
+tools = [list_all_services, search_salon_info, check_availability, create_booking, get_booking_details, check_discount]
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -191,11 +228,31 @@ def get_system_prompt():
 Today's Date: {datetime.now().strftime('%A, %Y-%m-%d')}
 Current Time: {datetime.now().strftime('%H:%M')}
 Website: https://flawlessbydrashti.in
+Booking Page: https://flawlessbydrashti.in/booking
 
 CORE DUTIES:
 - Help guests discover services and prices.
 - Check date/time availability.
 - Complete bookings (requires: name, phone, email, service, date, time).
+- Inform guests about active discounts and the payment flow.
+
+SERVICE CATALOG (always source live data via list_all_services). Categories you should expect:
+- **Event Package** — premium curated packages (e.g. Bridal, Reception, Engagement, Haldi/Mehendi).
+- **Standard Makeup** — single-occasion looks (e.g. Party, Engagement Guest, Casual Glam).
+- **Add-On** — extras that pair with a main service (e.g. Lashes, Saree Draping, Hair Styling).
+
+DISCOUNTS:
+- We currently run **WELCOME5**: 5% off the first booking for new customers.
+- Always confirm the latest offers via the check_discount tool before quoting any code.
+- The coupon must be applied on the website booking page; it is not redeemable inside this chat.
+
+PAYMENT FLOW (READ CAREFULLY):
+- We collect a **50% advance** online via **Razorpay** to confirm the slot.
+- The **remaining 50%** is paid in person at the studio on the appointment day.
+- **Payments cannot be processed inside this chat** (PCI compliance). Razorpay needs the secure browser checkout.
+- After collecting all booking details here, ALWAYS direct the guest to https://flawlessbydrashti.in/booking
+  to complete the secure 50% advance payment. Phrase it warmly, e.g.:
+  "To complete your booking with secure payment, please visit https://flawlessbydrashti.in/booking — your details are ready and the 50% advance takes under a minute via Razorpay."
 
 STYLE RULES:
 - Professional, concise, elegant. No emojis.
@@ -206,14 +263,16 @@ CRITICAL - TOOL OUTPUT RULE:
 When a tool returns data (like services table or time slots), you MUST include that EXACT output in your final response.
 - If list_all_services returns a table, include THE FULL TABLE in your answer
 - If check_availability returns slots, include THE SLOTS TAG in your answer
+- If check_discount returns codes, include them verbatim in your answer
 - NEVER summarize or omit tool output. Always show the complete data to the user.
 
 TOOL USAGE:
-1. list_all_services - For menu/pricing questions. ALWAYS show the returned table.
+1. list_all_services - For menu/pricing/category questions. ALWAYS show the returned table.
 2. search_salon_info - For location/hours
 3. check_availability - Before confirming any slot. Include the ||SLOTS:...|| tag.
 4. create_booking - Only when ALL details are collected
 5. get_booking_details - To check existing booking status
+6. check_discount - For any question about offers, discounts, deals, promo codes, or savings
 
 LOGIN RULE:
 - Messages start with [LOGGED_IN: True/False]
@@ -228,6 +287,8 @@ BOOKING FLOW:
 5. Collect name, phone, email
 6. Call create_booking
 7. Include ||ID:X|| tag in confirmation
+8. Conclude by directing the guest to https://flawlessbydrashti.in/booking to pay the 50% advance via Razorpay
+   (mention WELCOME5 if eligible, surfaced via check_discount).
 
 MEMORY: Remember details from previous messages. Don't re-ask.
 """
@@ -333,42 +394,25 @@ agent_executor = AgentExecutor(
 
 @app.route('/chat', methods=['POST'])
 def chat_endpoint():
+    data = request.json
+    user_message = data.get("message", "")
+    is_logged_in = data.get("isLoggedIn", False)
+    
+    if not user_message:
+        return jsonify({"reply": "I didn't catch that. How can I help you?"}), 400
+        
+    if user_message.lower() == "reset":
+        memory.clear()
+        return jsonify({"reply": "Conversation reset."})
+        
     try:
-        data = request.json
-        user_message = data.get('message', '')
-        
-        if not user_message.strip():
-            return jsonify({"reply": "I didn't catch that. How may I assist you?"})
-        
-        if user_message.lower() == "reset":
-            memory.clear()
-            return jsonify({"reply": "Memory cleared. How may I help you today?"})
-
-        is_logged_in = data.get('is_logged_in', False)
-        print(f"📨 Input: {user_message} | LoggedIn: {is_logged_in}")
-        
-        contextual_input = f"[LOGGED_IN: {is_logged_in}] {user_message}"
-
-        # Invoke Agent
-        response = agent_executor.invoke({
-            "input": contextual_input
-        })
-        
-        output_text = response.get("output", "I apologize, something went wrong. Please try again.")
-        print(f"🤖 Output: {output_text}")
-        
-        return jsonify({"reply": output_text})
-
+        # Prepend login state
+        contextual_message = f"[LOGGED_IN: {is_logged_in}]\n{user_message}"
+        response = agent_executor.invoke({"input": contextual_message})
+        return jsonify({"reply": response["output"]})
     except Exception as e:
-        print(f"❌ SYSTEM ERROR: {e}")
-        error_msg = str(e)
-        
-        # Rate limit error
-        if "429" in error_msg or "Resource exhausted" in error_msg:
-            return jsonify({"reply": "I'm currently assisting many guests. Please try again in a moment."}), 429
-        
-        # Generic fallback
-        return jsonify({"reply": "I apologize for the inconvenience. Please try your request again."})
+        print(f"Chat Error: {e}")
+        return jsonify({"reply": "I apologize, but I am having trouble connecting to the system right now. Please try again later."}), 500
 
 @app.route('/', methods=['GET'])
 def home():

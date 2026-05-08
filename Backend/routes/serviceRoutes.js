@@ -1,14 +1,15 @@
 import { Router } from 'express';
 import {
   getAllServices,
-  getGallery, // Renamed from getGalleryImages
+  getGallery,
   createService,
   updateService,
   deleteService,
-  addGalleryItem, // Added
-  deleteGalleryItem, // Added
-  uploadServiceImage, // Added
-  getServiceRecommendations // Added - for city-based recommendations
+  reorderServices,
+  addGalleryItem,
+  deleteGalleryItem,
+  uploadServiceImage,
+  getServiceRecommendations
 } from '../controllers/serviceController.js';
 
 import { upload } from '../middleware/uploadMiddleware.js'; // 👈 Added
@@ -27,7 +28,8 @@ router.get('/recommendations', getServiceRecommendations); // City-based recomme
 // --- Admin Routes ---
 // (Protected: User must be logged in AND be an admin)
 router.post('/services', authenticateToken, authorizeAdmin, createService);
-router.post('/services/upload', authenticateToken, authorizeAdmin, upload.single('image'), uploadServiceImage); // 👈 Added
+router.post('/services/upload', authenticateToken, authorizeAdmin, upload.single('image'), uploadServiceImage);
+router.put('/services/reorder', authenticateToken, authorizeAdmin, reorderServices);
 router.put('/services/:id', authenticateToken, authorizeAdmin, updateService);
 router.delete('/services/:id', authenticateToken, authorizeAdmin, deleteService);
 

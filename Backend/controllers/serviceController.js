@@ -9,7 +9,7 @@ const MINIMUM_BOOKINGS = 10; // Minimum bookings to show city-specific recommend
 export const getAllServices = async (req, res) => {
   try {
     const services = await query(
-      'SELECT * FROM services WHERE is_active = true ORDER BY name'
+      'SELECT * FROM services WHERE is_active = true ORDER BY display_order ASC, created_at DESC'
     );
     res.json(services);
   } catch (error) {
@@ -132,6 +132,27 @@ export const deleteService = async (req, res) => {
   } catch (error) {
     console.error('Delete service error:', error);
     res.status(500).json({ message: 'Error deleting service' });
+  }
+};
+
+// --------------------- REORDER SERVICES ---------------------
+export const reorderServices = async (req, res) => {
+  try {
+    const { orderedIds } = req.body;
+
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      return res.status(400).json({ message: 'orderedIds array is required' });
+    }
+
+    // Batch update display_order for each service
+    for (let i = 0; i < orderedIds.length; i++) {
+      await query('UPDATE services SET display_order = ? WHERE id = ?', [i, orderedIds[i]]);
+    }
+
+    res.json({ message: 'Services reordered successfully' });
+  } catch (error) {
+    console.error('Reorder services error:', error);
+    res.status(500).json({ message: 'Error reordering services' });
   }
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Globe from 'react-globe.gl';
@@ -10,11 +10,13 @@ import {
   LayoutDashboard, Users, Calendar, IndianRupee, Bell, Search,
   MapPin, Cloud, Sun, Moon, LogOut, CheckCircle, XCircle, MoreHorizontal,
   Wind, Droplets, Trash2, Edit2, Plus, Filter, Loader2, AlertTriangle,
-  Clock, Download, RefreshCcw, Send
+  Clock, Download, RefreshCcw, Send, GripVertical
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
-import { API_BASE_URL, getImageUrl } from '../config'; // Import Config
+import Cropper from 'react-easy-crop';
+import { API_BASE_URL, getImageUrl } from '../config';
 import { useTheme } from '../context/ThemeContext';
+import { reorderServices } from '../services/api';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -51,8 +53,18 @@ const Dashboard = () => {
   const [editingService, setEditingService] = useState(null);
   const [serviceToDelete, setServiceToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false); // ✅ Added Upload Loading
+  const [isUploading, setIsUploading] = useState(false);
   const [serviceFormData, setServiceFormData] = useState({ name: '', description: '', price: '', duration: '', image_url: '', category: '' });
+
+  // Drag & Drop state
+  const [draggedServiceId, setDraggedServiceId] = useState(null);
+
+  // Image Crop state
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [cropImage, setCropImage] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
   // --- API CALLS ---
   useEffect(() => {
@@ -313,31 +325,81 @@ const Dashboard = () => {
   };
 
   // ✅ HANDLE SERVICE IMAGE UPLOAD
-  const handleServiceImageUpload = async (e) => {
+  // --- IMAGE CROP HELPERS ---
+  const createCroppedImage = useCallback(async (imageSrc, pixelCrop) => {
+    const image = new Image();
+    image.src = imageSrc;
+    await new Promise(resolve => { image.onload = resolve; });
+    const canvas = document.createElement('canvas');
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, pixelCrop.width, pixelCrop.height);
+    return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+  }, []);
+
+  const onCropComplete = useCallback((_, croppedPixels) => setCroppedAreaPixels(croppedPixels), []);
+
+  const handleServiceImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { setCropImage(reader.result); setShowCropModal(true); };
+    reader.readAsDataURL(file);
+    e.target.value = ''; // reset so same file can be re-selected
+  };
 
-    const formData = new FormData();
-    formData.append('image', file);
-
-    const toastId = toast.loading('Uploading image...');
+  const handleCropConfirm = async () => {
+    if (!croppedAreaPixels || !cropImage) return;
     setIsUploading(true);
+    const toastId = toast.loading('Cropping & uploading...');
     try {
+      const blob = await createCroppedImage(cropImage, croppedAreaPixels);
+      const formData = new FormData();
+      formData.append('image', blob, 'cropped.jpg');
       const res = await axios.post(`${API_BASE_URL}/services/upload`, formData, {
-        headers: {
-          ...getAuthHeader().headers,
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { ...getAuthHeader().headers, 'Content-Type': 'multipart/form-data' }
       });
-      setServiceFormData({ ...serviceFormData, image_url: res.data.image_url });
-      toast.success('Image Uploaded!', { id: toastId });
+      setServiceFormData(prev => ({ ...prev, image_url: res.data.image_url }));
+      toast.success('Image uploaded!', { id: toastId });
     } catch (err) {
-      console.error("Upload Error Details:", err.response?.data || err.message);
-      const errorMessage = err.response?.data?.message || err.message || 'Upload failed';
-      toast.error(`Error: ${errorMessage}`, { id: toastId });
+      console.error('Upload Error:', err.response?.data || err.message);
+      toast.error(`Upload failed: ${err.response?.data?.message || err.message}`, { id: toastId });
     } finally {
       setIsUploading(false);
+      setShowCropModal(false);
+      setCropImage(null);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
     }
+  };
+
+  // --- DRAG & DROP REORDER ---
+  const handleDragStart = (e, serviceId) => {
+    setDraggedServiceId(serviceId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
+
+  const handleDrop = async (e, targetId) => {
+    e.preventDefault();
+    if (draggedServiceId === targetId) return;
+    const oldIndex = services.findIndex(s => s.id === draggedServiceId);
+    const newIndex = services.findIndex(s => s.id === targetId);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = [...services];
+    const [moved] = reordered.splice(oldIndex, 1);
+    reordered.splice(newIndex, 0, moved);
+    setServices(reordered); // optimistic update
+    try {
+      await reorderServices(reordered.map(s => s.id));
+      toast.success('Order saved!');
+    } catch (err) {
+      toast.error('Failed to save order');
+      fetchData(); // revert
+    }
+    setDraggedServiceId(null);
   };
 
   const executeDeleteService = async () => {
@@ -804,9 +866,10 @@ const Dashboard = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {services.map(service => (
-                <div key={service.id} className="bg-stone-900/50 border border-white/10 rounded-2xl overflow-hidden group hover:border-white/20 transition-all">
+                <div key={service.id} draggable onDragStart={(e) => handleDragStart(e, service.id)} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, service.id)} className={`bg-stone-900/50 border rounded-2xl overflow-hidden group hover:border-white/20 transition-all cursor-grab active:cursor-grabbing ${draggedServiceId === service.id ? 'border-white/40 opacity-50' : 'border-white/10'}`}>
                   <div className="h-48 overflow-hidden relative">
                     <img src={getImageUrl(service.image_url)} alt={service.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500 opacity-80 group-hover:opacity-100" />
+                    <div className="absolute top-4 left-4"><GripVertical className="w-5 h-5 text-white/60" /></div>
                     <div className="absolute top-4 right-4 flex gap-2">
                       {service.category && <span className="bg-white/20 backdrop-blur-md px-2 py-1 rounded-full text-[9px] font-bold text-white border border-white/10 uppercase tracking-wider">{service.category}</span>}
                       <span className="bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/10">₹{service.price}</span>
@@ -818,8 +881,8 @@ const Dashboard = () => {
                     <div className="flex items-center justify-between pt-4 border-t border-white/5">
                       <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">{service.duration} Mins</span>
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => { setEditingService(service); setServiceFormData(service); setShowServiceModal(true); }} className="p-2 hover:bg-white/10 rounded-lg text-stone-400 hover:text-white transition"><Edit2 className="w-4 h-4" /></button>
-                        <button onClick={() => setServiceToDelete(service)} className="p-2 hover:bg-red-500/10 rounded-lg text-stone-400 hover:text-red-400 transition"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); setEditingService(service); setServiceFormData(service); setShowServiceModal(true); }} className="p-2 hover:bg-white/10 rounded-lg text-stone-400 hover:text-white transition"><Edit2 className="w-4 h-4" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); setServiceToDelete(service); }} className="p-2 hover:bg-red-500/10 rounded-lg text-stone-400 hover:text-red-400 transition"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </div>
                   </div>
@@ -1066,6 +1129,33 @@ const Dashboard = () => {
               <button onClick={() => setServiceToDelete(null)} className="flex-1 py-3 rounded-xl border border-white/10 text-stone-400 hover:text-white text-xs font-bold uppercase">Cancel</button>
               <button onClick={executeDeleteService} disabled={isDeleting} className="flex-1 py-3 rounded-xl bg-red-600 text-white hover:bg-red-700 text-xs font-bold uppercase flex justify-center items-center gap-2">{isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete'}</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* IMAGE CROP MODAL */}
+      {showCropModal && cropImage && (
+        <div className="fixed inset-0 bg-black/90 z-[60] flex flex-col items-center justify-center">
+          <div className="relative w-full max-w-2xl h-[60vh]">
+            <Cropper
+              image={cropImage}
+              crop={crop}
+              zoom={zoom}
+              aspect={16 / 9}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={onCropComplete}
+            />
+          </div>
+          <div className="flex items-center gap-6 mt-6">
+            <label className="text-stone-400 text-xs font-bold uppercase tracking-widest">Zoom</label>
+            <input type="range" min={1} max={3} step={0.1} value={zoom} onChange={e => setZoom(Number(e.target.value))} className="w-48 accent-white" />
+          </div>
+          <div className="flex gap-4 mt-6">
+            <button onClick={() => { setShowCropModal(false); setCropImage(null); }} className="px-8 py-3 rounded-xl border border-white/10 text-stone-400 hover:text-white text-xs font-bold uppercase tracking-widest">Cancel</button>
+            <button onClick={handleCropConfirm} disabled={isUploading} className="px-8 py-3 rounded-xl bg-white text-black text-xs font-bold uppercase tracking-widest hover:bg-stone-200 disabled:opacity-50 flex items-center gap-2">
+              {isUploading && <Loader2 size={14} className="animate-spin" />} Crop & Upload
+            </button>
           </div>
         </div>
       )}

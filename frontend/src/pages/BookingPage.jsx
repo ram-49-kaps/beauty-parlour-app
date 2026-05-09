@@ -855,7 +855,7 @@ const BookingPage = () => {
             </div>
           </div>
           <div className={`mt-6 pt-4 border-t text-center text-[11px] tracking-widest uppercase font-semibold ${isDark ? 'border-white/10 text-stone-500' : 'border-gray-200 text-gray-400'}`}>
-            📊 Service rankings updated daily based on real bookings
+            Service rankings updated daily based on real bookings
           </div>
         </div>
       </div>

@@ -551,7 +551,7 @@ const Dashboard = () => {
       </header>
 
       {/* MAIN CONTENT */}
-      <main className="pt-28 pb-12 px-6 max-w-[1600px] mx-auto space-y-8">
+      <main className="pt-20 md:pt-28 pb-8 md:pb-12 px-3 md:px-6 max-w-[1600px] mx-auto space-y-4 md:space-y-8">
 
         {/* STATS & CHARTS */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
@@ -559,56 +559,56 @@ const Dashboard = () => {
             {/* Stat Cards - Optimized for Mobile Grid */}
             <div className="grid grid-cols-2 gap-3 md:gap-4">
               {/* Card 1: Total */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-stone-900 border border-white/10 p-4 rounded-xl relative overflow-hidden group">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-stone-900 border border-white/10 p-3 md:p-4 rounded-xl relative overflow-hidden group">
                 <div className="absolute -right-4 -top-4 w-16 h-16 bg-blue-500/10 rounded-full blur-xl group-hover:bg-blue-500/20 transition-all" />
                 <div className="relative z-10">
                   <div className="flex justify-between items-start mb-2">
                     <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wider">Bookings</p>
                     <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-400"><LayoutDashboard size={14} /></div>
                   </div>
-                  <h3 className="text-2xl md:text-3xl text-white font-light">{stats.totalBookings}</h3>
+                  <h3 className="text-xl md:text-3xl text-white font-light">{stats.totalBookings}</h3>
                 </div>
               </motion.div>
 
               {/* Card 2: Pending */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-stone-900 border border-white/10 p-4 rounded-xl relative overflow-hidden group">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-stone-900 border border-white/10 p-3 md:p-4 rounded-xl relative overflow-hidden group">
                 <div className="absolute -right-4 -top-4 w-16 h-16 bg-yellow-500/10 rounded-full blur-xl group-hover:bg-yellow-500/20 transition-all" />
                 <div className="relative z-10">
                   <div className="flex justify-between items-start mb-2">
                     <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wider">Pending</p>
                     <div className="p-1.5 rounded-md bg-yellow-500/10 text-yellow-400"><Clock size={14} /></div>
                   </div>
-                  <h3 className="text-2xl md:text-3xl text-white font-light">{stats.pendingBookings}</h3>
+                  <h3 className="text-xl md:text-3xl text-white font-light">{stats.pendingBookings}</h3>
                 </div>
               </motion.div>
 
               {/* Card 3: Confirmed */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-stone-900 border border-white/10 p-4 rounded-xl relative overflow-hidden group">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-stone-900 border border-white/10 p-3 md:p-4 rounded-xl relative overflow-hidden group">
                 <div className="absolute -right-4 -top-4 w-16 h-16 bg-green-500/10 rounded-full blur-xl group-hover:bg-green-500/20 transition-all" />
                 <div className="relative z-10">
                   <div className="flex justify-between items-start mb-2">
                     <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wider">Confirmed</p>
                     <div className="p-1.5 rounded-md bg-green-500/10 text-green-400"><CheckCircle size={14} /></div>
                   </div>
-                  <h3 className="text-2xl md:text-3xl text-white font-light">{stats.confirmedBookings}</h3>
+                  <h3 className="text-xl md:text-3xl text-white font-light">{stats.confirmedBookings}</h3>
                 </div>
               </motion.div>
 
               {/* Card 4: Revenue */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-stone-900 border border-white/10 p-4 rounded-xl relative overflow-hidden group">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-stone-900 border border-white/10 p-3 md:p-4 rounded-xl relative overflow-hidden group">
                 <div className="absolute -right-4 -top-4 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition-all" />
                 <div className="relative z-10">
                   <div className="flex justify-between items-start mb-2">
                     <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wider">Revenue</p>
                     <div className="p-1.5 rounded-md bg-emerald-500/10 text-emerald-400"><IndianRupee size={14} /></div>
                   </div>
-                  <h3 className="text-2xl md:text-3xl text-white font-light">₹{stats.totalEarnings}</h3>
+                  <h3 className="text-xl md:text-3xl text-white font-light">₹{stats.totalEarnings}</h3>
                 </div>
               </motion.div>
             </div>
 
             {/* 📊 REAL DYNAMIC CHART */}
-            <div className="bg-stone-900/30 border border-white/5 p-6 rounded-2xl h-[320px] relative">
+            <div className="bg-stone-900/30 border border-white/5 p-3 md:p-6 rounded-2xl h-[220px] md:h-[320px] relative">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-stone-400">Weekly Revenue Analytics</h3>
                 <button onClick={handleResetData} className="text-[10px] bg-red-500/10 text-red-500 px-3 py-1 rounded border border-red-500/20 hover:bg-red-500 hover:text-white transition uppercase font-bold tracking-wider">
@@ -627,15 +627,15 @@ const Dashboard = () => {
               </ResponsiveContainer>
             </div>
           </div>
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-stone-900/50 border border-white/5 rounded-2xl overflow-hidden h-[220px] relative group">
+          <div className="lg:col-span-1 space-y-4 md:space-y-6">
+            <div className="hidden lg:block bg-stone-900/50 border border-white/5 rounded-2xl overflow-hidden h-[220px] relative group">
               <div className="absolute top-4 left-4 z-10 pointer-events-none">
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-stone-400 flex items-center gap-2"><MapPin size={10} /> Live Tracking</h3>
                 <p className="text-white text-sm font-bold">Surat, India</p>
               </div>
               <Globe ref={globeEl} height={220} width={400} backgroundColor="rgba(0,0,0,0)" globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg" pointsData={[{ lat: 21.1702, lng: 72.8311, size: 1, color: 'white' }]} pointAltitude={0.1} pointColor="color" pointRadius={0.5} atmosphereColor="white" atmosphereAltitude={0.15} />
             </div>
-            <div className="bg-gradient-to-br from-indigo-900/20 to-black border border-white/5 p-6 rounded-2xl relative overflow-hidden">
+            <div className="bg-gradient-to-br from-indigo-900/20 to-black border border-white/5 p-4 md:p-6 rounded-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-3xl" />
               <div className="flex justify-between items-start relative z-10">
                 <div>
@@ -654,12 +654,12 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="flex gap-4 border-b border-white/10 pb-4 overflow-x-auto no-scrollbar">
-          <button onClick={() => setActiveTab('bookings')} className={`px-4 py-2 text-sm font-bold uppercase tracking-widest transition-colors ${activeTab === 'bookings' ? 'text-white border-b-2 border-white' : 'text-stone-500 hover:text-stone-300'}`}>Bookings</button>
+        <div className="flex gap-2 md:gap-4 border-b border-white/10 pb-3 md:pb-4 overflow-x-auto no-scrollbar">
+          <button onClick={() => setActiveTab('bookings')} className={`px-3 md:px-4 py-2 text-xs md:text-sm font-bold uppercase tracking-wider md:tracking-widest transition-colors whitespace-nowrap ${activeTab === 'bookings' ? 'text-white border-b-2 border-white' : 'text-stone-500 hover:text-stone-300'}`}>Bookings</button>
           {/* Services Tab */}
           <button
             onClick={() => setActiveTab('services')}
-            className={`px-4 py-2 text-sm font-bold uppercase tracking-widest transition-colors ${activeTab === 'services' ? 'text-white border-b-2 border-white' : 'text-stone-500 hover:text-stone-300'}`}
+            className={`px-3 md:px-4 py-2 text-xs md:text-sm font-bold uppercase tracking-wider md:tracking-widest transition-colors whitespace-nowrap ${activeTab === 'services' ? 'text-white border-b-2 border-white' : 'text-stone-500 hover:text-stone-300'}`}
           >
             Services
           </button>
@@ -667,7 +667,7 @@ const Dashboard = () => {
           {/* Gallery Tab */}
           <button
             onClick={() => setActiveTab('gallery')}
-            className={`px-4 py-2 text-sm font-bold uppercase tracking-widest transition-colors ${activeTab === 'gallery' ? 'text-white border-b-2 border-white' : 'text-stone-500 hover:text-stone-300'}`}
+            className={`px-3 md:px-4 py-2 text-xs md:text-sm font-bold uppercase tracking-wider md:tracking-widest transition-colors whitespace-nowrap ${activeTab === 'gallery' ? 'text-white border-b-2 border-white' : 'text-stone-500 hover:text-stone-300'}`}
           >
             Gallery
           </button>
@@ -675,7 +675,7 @@ const Dashboard = () => {
           {/* Subscribers Tab */}
           <button
             onClick={() => setActiveTab('subscribers')}
-            className={`px-4 py-2 text-sm font-bold uppercase tracking-widest transition-colors ${activeTab === 'subscribers' ? 'text-white border-b-2 border-white' : 'text-stone-500 hover:text-stone-300'}`}
+            className={`px-3 md:px-4 py-2 text-xs md:text-sm font-bold uppercase tracking-wider md:tracking-widest transition-colors whitespace-nowrap ${activeTab === 'subscribers' ? 'text-white border-b-2 border-white' : 'text-stone-500 hover:text-stone-300'}`}
           >
             Subscribers <span className="ml-1 bg-stone-800 text-stone-400 px-1.5 py-0.5 rounded-full text-[10px]">{subscribers.length}</span>
           </button>
@@ -880,7 +880,7 @@ const Dashboard = () => {
                     <p className="text-stone-400 text-sm mb-4 line-clamp-2 h-10">{service.description}</p>
                     <div className="flex items-center justify-between pt-4 border-t border-white/5">
                       <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">{service.duration} Mins</span>
-                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         <button onClick={(e) => { e.stopPropagation(); setEditingService(service); setServiceFormData(service); setShowServiceModal(true); }} className="p-2 hover:bg-white/10 rounded-lg text-stone-400 hover:text-white transition"><Edit2 className="w-4 h-4" /></button>
                         <button onClick={(e) => { e.stopPropagation(); setServiceToDelete(service); }} className="p-2 hover:bg-red-500/10 rounded-lg text-stone-400 hover:text-red-400 transition"><Trash2 className="w-4 h-4" /></button>
                       </div>
@@ -922,7 +922,7 @@ const Dashboard = () => {
             </div>
 
             {/* Gallery Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
               {gallery.map(item => (
                 <div key={item.id} className="relative group bg-stone-900 border border-white/10 rounded-2xl overflow-hidden aspect-square">
                   {item.type === 'video' ? (
@@ -1136,7 +1136,7 @@ const Dashboard = () => {
       {/* IMAGE CROP MODAL */}
       {showCropModal && cropImage && (
         <div className="fixed inset-0 bg-black/90 z-[60] flex flex-col items-center justify-center">
-          <div className="relative w-full max-w-2xl h-[60vh]">
+          <div className="relative w-full max-w-2xl h-[40vh] md:h-[60vh] mx-4">
             <Cropper
               image={cropImage}
               crop={crop}

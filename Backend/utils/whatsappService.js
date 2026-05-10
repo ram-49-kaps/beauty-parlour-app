@@ -57,7 +57,7 @@ Hi ${customer_name},
 
 Your appointment request is under review! 
 
-*Ref No:* FLAW-${id}
+*Ref No:* #FBD-${String(id).padStart(4, '0')}
 *Service:* ${service_name}
 *Date:* ${dateStr}
 *Time:* ${booking_time}
@@ -73,7 +73,7 @@ Hi ${customer_name},
 
 Your appointment has been approved! 
 
-*Ref No:* FLAW-${id}
+*Ref No:* #FBD-${String(id).padStart(4, '0')}
 *Service:* ${service_name}
 *Date:* ${dateStr}
 *Time:* ${booking_time}

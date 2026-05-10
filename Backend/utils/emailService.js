@@ -68,6 +68,24 @@ const sendEmailViaBrevo = async (to, subject, htmlContent, attachments = []) => 
   console.log("📧 Email service ready (Brevo API)");
 })();
 
+// --- HUMAN-FRIENDLY FORMATTERS ---
+const formatDate = (d) => {
+  try {
+    const date = new Date(d);
+    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch { return String(d); }
+};
+
+const formatTime = (t) => {
+  if (!t) return '';
+  const parts = String(t).split(':');
+  const h = parseInt(parts[0]);
+  const m = parts[1] || '00';
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+  return `${hour12}:${m} ${ampm}`;
+};
+
 // --- COMMON STYLES FOR CONSISTENCY ---
 const styles = {
   logo: `width: 80px; max-width: 80px; height: auto; display: block; margin: 0 auto; border-radius: 50%; border: 1px solid #e5e7eb; padding: 2px;`,
@@ -85,7 +103,7 @@ const styles = {
 // 1. CONFIRMATION EMAIL
 const sendBookingConfirmation = async (booking, serviceName) => {
   const targetEmail = booking.customer_email || process.env.EMAIL_USER;
-  const refNo = `FLAW-${booking.id}`;
+  const refNo = `#FBD-${String(booking.id).padStart(4, '0')}`;
 
   // Build payment breakdown HTML
   const hasPayment = booking.advance_amount > 0 || booking.remaining_amount > 0;
@@ -115,8 +133,8 @@ const sendBookingConfirmation = async (booking, serviceName) => {
         <div style="${styles.detailBox} border-left: 4px solid #059669;">
           <div style="${styles.detailRow}"><strong>Reference No:</strong> ${refNo}</div>
           <div style="${styles.detailRow}"><strong>Service:</strong> ${serviceName}</div>
-          <div style="${styles.detailRow}"><strong>Date:</strong> ${new Date(booking.booking_date).toDateString()}</div>
-          <div style="${styles.detailRow}"><strong>Time:</strong> ${booking.booking_time}</div>
+          <div style="${styles.detailRow}"><strong>Date:</strong> ${formatDate(booking.booking_date)}</div>
+          <div style="${styles.detailRow}"><strong>Time:</strong> ${formatTime(booking.booking_time)}</div>
           <div style="${styles.detailRow}"><strong>Total Amount:</strong> ₹${booking.total_amount}</div>
           ${paymentSection}
         </div>
@@ -193,7 +211,7 @@ const sendBookingRejection = async (booking, serviceName, reason = '') => {
 
 // 3. NOTIFICATION (PENDING) EMAIL - NOW WITH PDF
 const sendBookingNotification = async (booking, serviceName) => {
-  const refNo = `FLAW-${booking.id}`;
+  const refNo = `#FBD-${String(booking.id).padStart(4, '0')}`;
 
   // Build payment info for notification
   const hasPayment = booking.advance_amount > 0 || booking.remaining_amount > 0;
@@ -221,8 +239,8 @@ const sendBookingNotification = async (booking, serviceName) => {
         <div style="${styles.detailBox} border-left: 4px solid #d97706;">
           <div style="${styles.detailRow}"><strong>Reference No:</strong> ${refNo}</div>
           <div style="${styles.detailRow}"><strong>Service:</strong> ${serviceName}</div>
-          <div style="${styles.detailRow}"><strong>Requested Date:</strong> ${new Date(booking.booking_date).toDateString()}</div>
-          <div style="${styles.detailRow}"><strong>Requested Time:</strong> ${booking.booking_time}</div>
+          <div style="${styles.detailRow}"><strong>Date:</strong> ${formatDate(booking.booking_date)}</div>
+          <div style="${styles.detailRow}"><strong>Time:</strong> ${formatTime(booking.booking_time)}</div>
           <div style="${styles.detailRow}"><strong>Total Amount:</strong> ₹${booking.total_amount}</div>
           ${paymentDetails}
         </div>

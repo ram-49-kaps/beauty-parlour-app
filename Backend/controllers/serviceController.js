@@ -224,7 +224,7 @@ export const getServiceRecommendations = async (req, res) => {
         s.name as service_name,
         s.id,
         COUNT(*) as booking_count,
-        RANK() OVER (ORDER BY COUNT(*) DESC) as rank
+        RANK() OVER (ORDER BY COUNT(*) DESC) as `rank`
       FROM bookings b
       JOIN services s ON b.service_id = s.id
       WHERE b.customer_city = ? 
@@ -258,7 +258,7 @@ export const getServiceRecommendations = async (req, res) => {
           s.id,
           s.name,
           COUNT(*) as booking_count,
-          RANK() OVER (ORDER BY COUNT(*) DESC) as rank
+          RANK() OVER (ORDER BY COUNT(*) DESC) as `rank`
         FROM bookings b
         JOIN services s ON b.service_id = s.id
         WHERE b.status IN ('confirmed', 'completed')

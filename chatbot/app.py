@@ -196,23 +196,58 @@ def create_booking(name: str, email: str, phone: str, service_name: str, booking
 
 @tool
 def get_booking_details(booking_id: str) -> str:
-    """Retrieves status and details for an existing booking ID."""
+    """Retrieves status and details for an existing booking ID. Accepts formats like: 1, FBD-0001, #FBD-0001, FBD0001."""
+    import re
+    
+    # Strip common prefixes and extract the numeric ID
+    clean_id = booking_id.strip().upper().replace('#', '').replace('FBD-', '').replace('FBD', '')
+    # Extract just the number (e.g., "0001" -> "1")
+    numeric_match = re.search(r'\d+', clean_id)
+    if numeric_match:
+        clean_id = str(int(numeric_match.group()))  # Remove leading zeros
+    else:
+        return f"Invalid booking ID format: {booking_id}. Please provide a valid ID like #FBD-0001."
+    
     conn = get_db_connection()
     if not conn: return "Database unavailable."
     
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
-        SELECT b.id, b.customer_name, b.booking_date, b.booking_time, b.status, s.name as service_name 
+        SELECT b.id, b.customer_name, b.customer_email, b.customer_phone,
+               b.booking_date, b.booking_time, b.status, b.payment_status,
+               b.total_amount, b.advance_amount, b.remaining_amount,
+               b.coupon_code, b.discount_amount,
+               s.name as service_name, s.duration
         FROM bookings b 
         JOIN services s ON b.service_id = s.id 
         WHERE b.id = %s
-    """, (booking_id,))
+    """, (clean_id,))
     booking = cursor.fetchone()
     cursor.close()
     conn.close()
     
-    if not booking: return f"I couldn't find any booking with ID {booking_id}."
-    return json.dumps(booking, default=str)
+    if not booking: return f"I couldn't find any booking with ID #FBD-{clean_id.zfill(4)}. Please double-check the ID."
+    
+    # Format a nice response
+    status_emoji = {"pending": "⏳", "confirmed": "✅", "completed": "🎉", "rejected": "❌", "cancelled": "🚫"}
+    payment_emoji = {"advance_paid": "💰 50% Advance Paid", "fully_paid": "✅ Fully Paid", None: "⏳ Pending"}
+    
+    result = f"""**Booking #{('FBD-' + str(booking['id']).zfill(4))}**
+- **Service:** {booking['service_name']} ({booking['duration']} mins)
+- **Date:** {booking['booking_date']}
+- **Time:** {str(booking['booking_time'])[:5]}
+- **Status:** {status_emoji.get(booking['status'], '❓')} {booking['status'].upper()}
+- **Payment:** {payment_emoji.get(booking['payment_status'], booking['payment_status'] or 'N/A')}
+- **Total:** ₹{booking['total_amount']}"""
+    
+    if booking.get('coupon_code'):
+        result += f"\n- **Coupon:** {booking['coupon_code']} (-₹{booking['discount_amount']})"
+    if booking.get('advance_amount'):
+        result += f"\n- **Advance Paid:** ₹{booking['advance_amount']}"
+    if booking.get('remaining_amount') and float(booking['remaining_amount']) > 0:
+        result += f"\n- **Remaining:** ₹{booking['remaining_amount']}"
+    
+    return result
 
 tools = [list_all_services, search_salon_info, check_availability, create_booking, get_booking_details, check_discount]
 

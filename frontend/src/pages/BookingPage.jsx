@@ -805,7 +805,7 @@ const BookingPage = () => {
             </div>
 
             {/* PAYMENT BREAKDOWN & SUBMIT */}
-            <div className={`mt-8 md:mt-12 pt-6 md:pt-8 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+            <div className={`mt-8 md:mt-12 pt-6 md:pt-8 pb-28 md:pb-0 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
               {calculateTotal() > 0 && (
                 <div className={`rounded-xl border p-4 sm:p-6 mb-6 ${isDark ? 'bg-stone-800 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
                   <p className={`text-xs font-bold uppercase tracking-widest mb-4 ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>Payment Summary</p>

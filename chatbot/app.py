@@ -275,9 +275,10 @@ TOOL USAGE:
 6. check_discount - For any question about offers, discounts, deals, promo codes, or savings
 
 LOGIN RULE:
-- Each user message is prefixed with their current status: [LOGGED_IN: True] or [LOGGED_IN: False]. 
-- If the current message has [LOGGED_IN: False] AND the user explicitly asks to BOOK AN APPOINTMENT: Reply exactly "To proceed with booking, please login first. ||LOGIN_REQUIRED||".
-- Do NOT ask the user to login if they are just saying hello, asking about services, or if their current status is [LOGGED_IN: True].
+- The guest's login status is already verified by the system before your response.
+- NEVER ask the guest to log in or mention login requirements. This is handled automatically.
+- If the guest is logged in, proceed normally with any booking or service request.
+- Focus entirely on helping with services, bookings, and information.
 
 BOOKING FLOW:
 1. Ask which service they want
@@ -404,10 +405,21 @@ def chat_endpoint():
     if user_message.lower() == "reset":
         memory.clear()
         return jsonify({"reply": "Conversation reset."})
-        
+
+    # ── Deterministic login gate (handled in code, NOT by the LLM) ──
+    booking_keywords = ["book", "appointment", "schedule", "reserve", "slot", "booking"]
+    wants_to_book = any(kw in user_message.lower() for kw in booking_keywords)
+
+    if not is_logged_in and wants_to_book:
+        return jsonify({"reply": "To proceed with booking, please login first. ||LOGIN_REQUIRED||"})
+
     try:
-        # Prepend login state
-        contextual_message = f"[LOGGED_IN: {is_logged_in}]\n{user_message}"
+        # Give the LLM clear context about the guest's login status
+        login_context = "[SYSTEM NOTE: The guest is logged in and verified. Do NOT ask them to login. Proceed with their request normally.]"
+        if not is_logged_in:
+            login_context = "[SYSTEM NOTE: The guest is browsing without an account. They can ask about services and pricing, but booking requires login — this is handled automatically, do NOT mention login yourself.]"
+
+        contextual_message = f"{login_context}\n{user_message}"
         response = agent_executor.invoke({"input": contextual_message})
         return jsonify({"reply": response["output"]})
     except Exception as e:

@@ -403,9 +403,9 @@ const BookingPage = () => {
   if (!user) return null;
 
   return (
-    <div className={`min-h-screen font-sans pt-40 pb-20 px-6 py-20 transition-colors duration-300 ${isDark ? 'bg-stone-950 text-white selection:bg-white/20' : 'bg-gray-50 text-gray-900 selection:bg-gray-900 selection:text-white'}`}>
+    <div className={`min-h-screen font-sans pt-24 md:pt-40 pb-32 md:pb-20 px-4 sm:px-6 transition-colors duration-300 ${isDark ? 'bg-stone-950 text-white selection:bg-white/20' : 'bg-gray-50 text-gray-900 selection:bg-gray-900 selection:text-white'}`}>
       <Toaster position="top-center" toastOptions={{ style: { borderRadius: '12px', fontSize: '14px', fontWeight: '500' } }} />
-      <div className="max-w-5xl mx-auto px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto sm:px-2 lg:px-8">
 
         {/* Header */}
         <div className="text-center mb-16 animate-fadeInUp">
@@ -414,7 +414,7 @@ const BookingPage = () => {
               Online Reservations
             </span>
           </div>
-          <h1 className={`text-4xl md:text-6xl font-light mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          <h1 className={`text-3xl sm:text-4xl md:text-6xl font-light mb-4 md:mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
             Secure Your <span className={`font-semibold ${isDark ? 'text-stone-400' : 'text-gray-600'}`}>Appointment</span>
           </h1>
           <p className={`max-w-xl mx-auto font-light leading-relaxed ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
@@ -470,7 +470,7 @@ const BookingPage = () => {
 
         {/* Booking Form */}
         <div className={`border rounded-2xl shadow-xl overflow-hidden animate-fadeInUp transition-colors ${isDark ? 'bg-stone-900 border-white/10' : 'bg-white border-gray-200'}`} style={{ animationDelay: '0.1s' }}>
-          <form onSubmit={handleSubmit} className="p-8 md:p-12">
+          <form onSubmit={handleSubmit} className="p-4 sm:p-6 md:p-12">
 
             {/* Personal Information */}
             <div className="space-y-8">
@@ -497,7 +497,7 @@ const BookingPage = () => {
                   {fieldErrors.customer_name && touched.customer_name && <p className="text-red-500 text-xs font-light mt-1 ml-1">{fieldErrors.customer_name}</p>}
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ml-1 ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
                       Email Address <span className={isDark ? 'text-white' : 'text-gray-900'}>*</span>
@@ -672,7 +672,7 @@ const BookingPage = () => {
               )}
 
               {/* DATE & TIME SELECTION */}
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid gap-6">
                 <div>
                   <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ml-1 ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
                     Preferred Date <span className={isDark ? 'text-white' : 'text-gray-900'}>*</span>
@@ -697,7 +697,7 @@ const BookingPage = () => {
                   <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ml-1 ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
                     Preferred Time <span className={isDark ? 'text-white' : 'text-gray-900'}>*</span>
                   </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-3">
                     {timeSlots.map((time) => {
                       const isBlocked = blockedTimes.includes(time);
                       const isSelected = formData.booking_time === time;
@@ -747,11 +747,11 @@ const BookingPage = () => {
               {selectedMainService && (
                 <div className="mt-6 animate-fadeIn">
                   {couponEligible && !couponApplied && (
-                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 mb-4 flex items-center gap-3 cursor-pointer" onClick={() => { setShowCoupon(true); setCouponCode(couponEligible.code); }}>
-                      <Gift className="w-5 h-5 text-amber-600 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm font-semibold text-amber-800"><Gift className="w-4 h-4 inline mr-1" /> New here? Use code <span className="font-mono bg-amber-100 px-2 py-0.5 rounded text-amber-900">{couponEligible.code}</span> for {couponEligible.discount_percent}% off!</p>
-                        <p className="text-xs text-amber-600 mt-0.5">Tap to apply automatically</p>
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3 sm:p-4 mb-4 flex items-start sm:items-center gap-3 cursor-pointer" onClick={() => { setShowCoupon(true); setCouponCode(couponEligible.code); }}>
+                      <Gift className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5 sm:mt-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm font-semibold text-amber-800 break-words"><Gift className="w-4 h-4 inline mr-1" /> New here? Use code <span className="font-mono bg-amber-100 px-1.5 sm:px-2 py-0.5 rounded text-amber-900 text-[11px] sm:text-sm">{couponEligible.code}</span> for {couponEligible.discount_percent}% off!</p>
+                        <p className="text-[10px] sm:text-xs text-amber-600 mt-0.5">Tap to apply automatically</p>
                       </div>
                     </div>
                   )}
@@ -762,7 +762,7 @@ const BookingPage = () => {
                   </div>
 
                   {showCoupon && (
-                    <div className="flex gap-3 animate-fadeInUp">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 animate-fadeInUp">
                       <input
                         type="text"
                         value={couponCode}
@@ -772,9 +772,9 @@ const BookingPage = () => {
                         className={`flex-1 px-4 py-3 border rounded-xl focus:outline-none text-sm tracking-widest uppercase disabled:opacity-50 ${isDark ? 'bg-stone-800 border-white/10 text-white focus:border-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-gray-400'}`}
                       />
                       {couponApplied ? (
-                        <button type="button" onClick={removeCoupon} className="px-6 py-3 border border-red-300 text-red-600 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-red-50 transition-all">Remove</button>
+                        <button type="button" onClick={removeCoupon} className="w-full sm:w-auto px-6 py-3 border border-red-300 text-red-600 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-red-50 transition-all">Remove</button>
                       ) : (
-                        <button type="button" onClick={handleApplyCoupon} disabled={couponLoading} className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-50 ${isDark ? 'bg-white text-black hover:bg-gray-200' : 'bg-gray-900 text-white hover:bg-gray-800'}`}>{couponLoading ? '...' : 'Apply'}</button>
+                        <button type="button" onClick={handleApplyCoupon} disabled={couponLoading} className={`w-full sm:w-auto px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-50 ${isDark ? 'bg-white text-black hover:bg-gray-200' : 'bg-gray-900 text-white hover:bg-gray-800'}`}>{couponLoading ? '...' : 'Apply'}</button>
                       )}
                     </div>
                   )}
@@ -809,8 +809,8 @@ const BookingPage = () => {
             </div>
 
             {/* MOBILE STICKY FOOTER */}
-            <div className="md:hidden fixed bottom-6 left-6 right-6 z-50">
-              <div className={`backdrop-blur-xl border p-5 rounded-2xl shadow-2xl ${isDark ? 'bg-stone-900/95 border-white/10' : 'bg-white/95 border-gray-200'}`}>
+            <div className="md:hidden fixed bottom-4 left-3 right-3 sm:bottom-6 sm:left-6 sm:right-6 z-50">
+              <div className={`backdrop-blur-xl border p-3 sm:p-5 rounded-2xl shadow-2xl ${isDark ? 'bg-stone-900/95 border-white/10' : 'bg-white/95 border-gray-200'}`}>
                 {calculateTotal() > 0 && couponApplied && <p className="text-amber-500 text-[10px] font-bold mb-1 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {couponApplied.discount_percent}% OFF Applied</p>}
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -831,12 +831,12 @@ const BookingPage = () => {
         </div>
 
         {/* Info Section */}
-        <div className={`mt-12 border rounded-xl p-8 shadow-sm animate-fadeInUp ${isDark ? 'bg-stone-900 border-white/10' : 'bg-white border-gray-200'}`} style={{ animationDelay: '0.2s' }}>
+        <div className={`mt-8 md:mt-12 border rounded-xl p-4 sm:p-6 md:p-8 shadow-sm animate-fadeInUp ${isDark ? 'bg-stone-900 border-white/10' : 'bg-white border-gray-200'}`} style={{ animationDelay: '0.2s' }}>
           <h3 className={`font-bold mb-6 text-xs uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-stone-300' : 'text-gray-700'}`}>
             <CheckCircle className={`w-4 h-4 ${isDark ? 'text-white' : 'text-gray-900'}`} />
             Booking Policy
           </h3>
-          <div className={`grid md:grid-cols-2 gap-4 text-xs font-light tracking-wide leading-relaxed ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
+          <div className={`grid sm:grid-cols-2 gap-4 text-xs font-light tracking-wide leading-relaxed ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>
             <div className="flex items-start gap-3">
               <span className={`mt-0.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>•</span>
               <span>A <strong>50% advance payment</strong> is required to confirm your booking. The remaining balance is due after service completion.</span>

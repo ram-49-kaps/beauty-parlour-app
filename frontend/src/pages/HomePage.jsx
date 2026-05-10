@@ -138,8 +138,8 @@ const Homepage = () => {
 
       {/* FOOTER (always dark) */}
       <footer className="bg-black text-gray-400 py-20 border-t border-gray-800 text-sm">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 grid md:grid-cols-4 gap-12">
-          <div className="col-span-2">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-12">
+          <div className="sm:col-span-2">
             <div className="flex items-center gap-4 mb-6">
               <img src="/Gallery/logo.jpg" alt="Flawless Logo" className="h-14 w-14 object-contain rounded-full border border-gray-700" />
               <div className="flex flex-col cursor-pointer select-none active:scale-95 transition-transform" onClick={handleSecretTap}>

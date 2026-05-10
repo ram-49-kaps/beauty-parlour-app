@@ -69,3 +69,49 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   transition-duration: 0.15s;
   transition-timing-function: ease;
 }
+
+/* ===== MOBILE RESPONSIVENESS ===== */
+
+/* Prevent horizontal scroll/overflow on all devices */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Safe area for notched phones (iPhone X+) */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Prevent iOS zoom on input focus (font-size < 16px triggers zoom) */
+@media screen and (max-width: 767px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Smooth touch scrolling for iOS */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Global animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn { animation: fadeIn 0.3s ease-out both; }
+.animate-fadeInUp { animation: fadeInUp 0.6s ease-out both; }

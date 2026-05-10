@@ -805,9 +805,9 @@ const BookingPage = () => {
             </div>
 
             {/* PAYMENT BREAKDOWN & SUBMIT */}
-            <div className={`hidden md:block mt-12 pt-8 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+            <div className={`mt-8 md:mt-12 pt-6 md:pt-8 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
               {calculateTotal() > 0 && (
-                <div className={`rounded-xl border p-6 mb-6 ${isDark ? 'bg-stone-800 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+                <div className={`rounded-xl border p-4 sm:p-6 mb-6 ${isDark ? 'bg-stone-800 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
                   <p className={`text-xs font-bold uppercase tracking-widest mb-4 ${isDark ? 'text-stone-400' : 'text-gray-500'}`}>Payment Summary</p>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between"><span className={isDark ? 'text-stone-400' : 'text-gray-500'}>Service Total</span><span className={isDark ? 'text-white' : 'text-gray-900'}>₹{calculateTotal()}</span></div>
@@ -821,7 +821,7 @@ const BookingPage = () => {
                   </div>
                 </div>
               )}
-              <div className="flex justify-end">
+              <div className="hidden md:flex justify-end">
                 <button type="submit" disabled={loading} className={`px-10 py-5 rounded-xl transition-all duration-300 font-bold text-xs uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 ${isDark ? 'bg-white text-black hover:bg-gray-200' : 'bg-gray-900 text-white hover:bg-gray-800'}`}>
                   {loading ? (<><div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>Processing Payment...</>) : (<>Pay ₹{getAdvance() > 0 ? getAdvance() : '---'} & Confirm<ArrowRight className="w-4 h-4" /></>)}
                 </button>

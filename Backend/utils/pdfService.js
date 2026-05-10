@@ -17,7 +17,7 @@ const formatDate = (d) => {
     try {
         const date = new Date(d);
         return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
+    } catch (e) {
         return String(d);
     }
 };

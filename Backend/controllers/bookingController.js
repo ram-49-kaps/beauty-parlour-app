@@ -927,3 +927,41 @@ export const resetAllBookings = async (req, res) => {
     res.status(500).json({ message: 'Error resetting data' });
   }
 };
+
+// --------------------- RESEND BOOKING EMAIL ---------------------
+export const resendBookingEmail = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Fetch booking with service name
+    const bookings = await query(`
+      SELECT b.*, s.name as service_name, s.duration
+      FROM bookings b
+      JOIN services s ON b.service_id = s.id
+      WHERE b.id = ?
+    `, [id]);
+
+    if (!bookings || bookings.length === 0) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    const booking = bookings[0];
+
+    if (!booking.customer_email) {
+      return res.status(400).json({ message: 'No email address on file for this booking' });
+    }
+
+    // Send the confirmation email with PDF
+    await emailService.sendBookingConfirmation(booking, booking.service_name);
+
+    console.log(`📨 Resent booking email for #FBD-${String(booking.id).padStart(4, '0')} to ${booking.customer_email}`);
+
+    res.json({
+      message: 'Email resent successfully',
+      email: booking.customer_email
+    });
+  } catch (error) {
+    console.error('Resend email error:', error);
+    res.status(500).json({ message: 'Error resending email' });
+  }
+};

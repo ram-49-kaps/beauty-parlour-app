@@ -196,15 +196,14 @@ def create_booking(name: str, email: str, phone: str, service_name: str, booking
 
 @tool
 def get_booking_details(booking_id: str) -> str:
-    """Retrieves status and details for an existing booking ID. Accepts formats like: 1, FBD-0001, #FBD-0001, FBD0001."""
+    """Retrieves status and details for an existing booking ID. Accepts formats like: 1, FBD-0001, #FBD-0001, FBD0001. Returns all details including customer email — do NOT ask the user for information that is already in the result."""
     import re
     
     # Strip common prefixes and extract the numeric ID
     clean_id = booking_id.strip().upper().replace('#', '').replace('FBD-', '').replace('FBD', '')
-    # Extract just the number (e.g., "0001" -> "1")
     numeric_match = re.search(r'\d+', clean_id)
     if numeric_match:
-        clean_id = str(int(numeric_match.group()))  # Remove leading zeros
+        clean_id = str(int(numeric_match.group()))
     else:
         return f"Invalid booking ID format: {booking_id}. Please provide a valid ID like #FBD-0001."
     
@@ -216,7 +215,7 @@ def get_booking_details(booking_id: str) -> str:
         SELECT b.id, b.customer_name, b.customer_email, b.customer_phone,
                b.booking_date, b.booking_time, b.status, b.payment_status,
                b.total_amount, b.advance_amount, b.remaining_amount,
-               b.coupon_code, b.discount_amount,
+               b.coupon_code, b.discount_amount, b.razorpay_payment_id,
                s.name as service_name, s.duration
         FROM bookings b 
         JOIN services s ON b.service_id = s.id 
@@ -228,28 +227,93 @@ def get_booking_details(booking_id: str) -> str:
     
     if not booking: return f"I couldn't find any booking with ID #FBD-{clean_id.zfill(4)}. Please double-check the ID."
     
-    # Format a nice response
-    status_emoji = {"pending": "⏳", "confirmed": "✅", "completed": "🎉", "rejected": "❌", "cancelled": "🚫"}
-    payment_emoji = {"advance_paid": "💰 50% Advance Paid", "fully_paid": "✅ Fully Paid", None: "⏳ Pending"}
+    # Human-friendly formatters
+    def fmt_date(d):
+        try:
+            from datetime import datetime as dt
+            date_obj = dt.strptime(str(d)[:10], "%Y-%m-%d") if isinstance(d, str) else d
+            return date_obj.strftime("%-d %B %Y")  # "21 May 2026"
+        except: return str(d)
     
-    result = f"""**Booking #{('FBD-' + str(booking['id']).zfill(4))}**
-- **Service:** {booking['service_name']} ({booking['duration']} mins)
-- **Date:** {booking['booking_date']}
-- **Time:** {str(booking['booking_time'])[:5]}
-- **Status:** {status_emoji.get(booking['status'], '❓')} {booking['status'].upper()}
-- **Payment:** {payment_emoji.get(booking['payment_status'], booking['payment_status'] or 'N/A')}
-- **Total:** ₹{booking['total_amount']}"""
+    def fmt_time(t):
+        try:
+            parts = str(t).split(':')
+            h, m = int(parts[0]), parts[1] if len(parts) > 1 else '00'
+            ampm = 'PM' if h >= 12 else 'AM'
+            h12 = h - 12 if h > 12 else (12 if h == 0 else h)
+            return f"{h12}:{m} {ampm}"
+        except: return str(t)
+    
+    def fmt_status(s):
+        labels = {"pending": "Pending Approval", "confirmed": "Confirmed", "completed": "Completed", "rejected": "Rejected", "cancelled": "Cancelled"}
+        return labels.get(s, s)
+    
+    def fmt_payment(p):
+        labels = {"advance_paid": "50% Advance Paid", "fully_paid": "Fully Paid", None: "Pending"}
+        return labels.get(p, p or "Pending")
+    
+    ref = f"#FBD-{str(booking['id']).zfill(4)}"
+    
+    result = f"""Booking {ref}
+
+Service: {booking['service_name']} ({booking['duration']} minutes)
+Date: {fmt_date(booking['booking_date'])}
+Time: {fmt_time(booking['booking_time'])}
+Status: {fmt_status(booking['status'])}
+Payment: {fmt_payment(booking['payment_status'])}
+
+Customer: {booking['customer_name']}
+Email: {booking['customer_email']}
+Phone: {booking['customer_phone']}
+
+Total Amount: Rs. {float(booking['total_amount']):,.2f}"""
     
     if booking.get('coupon_code'):
-        result += f"\n- **Coupon:** {booking['coupon_code']} (-₹{booking['discount_amount']})"
-    if booking.get('advance_amount'):
-        result += f"\n- **Advance Paid:** ₹{booking['advance_amount']}"
+        result += f"\nDiscount: {booking['coupon_code']} (- Rs. {float(booking['discount_amount']):,.2f})"
+        final = float(booking['total_amount']) - float(booking['discount_amount'])
+        result += f"\nFinal Amount: Rs. {final:,.2f}"
+    if booking.get('advance_amount') and float(booking['advance_amount']) > 0:
+        result += f"\nAdvance Paid: Rs. {float(booking['advance_amount']):,.2f}"
     if booking.get('remaining_amount') and float(booking['remaining_amount']) > 0:
-        result += f"\n- **Remaining:** ₹{booking['remaining_amount']}"
+        result += f"\nBalance Due: Rs. {float(booking['remaining_amount']):,.2f}"
+    if booking.get('razorpay_payment_id'):
+        result += f"\nPayment ID: {booking['razorpay_payment_id']}"
     
     return result
 
-tools = [list_all_services, search_salon_info, check_availability, create_booking, get_booking_details, check_discount]
+
+@tool
+def resend_booking_email(booking_id: str) -> str:
+    """Resends the booking confirmation email for a given booking ID. Use this when a customer asks to receive their booking details or receipt via email. The email is sent to the address already on file — do NOT ask the customer for their email."""
+    import re
+    
+    # Parse booking ID
+    clean_id = booking_id.strip().upper().replace('#', '').replace('FBD-', '').replace('FBD', '')
+    numeric_match = re.search(r'\d+', clean_id)
+    if numeric_match:
+        clean_id = str(int(numeric_match.group()))
+    else:
+        return f"Invalid booking ID: {booking_id}"
+    
+    # Call the Node.js backend API to resend the email
+    backend_url = os.getenv("BACKEND_URL", "https://beauty-parlour-app.onrender.com")
+    try:
+        response = requests.post(
+            f"{backend_url}/api/bookings/{clean_id}/resend-email",
+            headers={"Content-Type": "application/json"},
+            timeout=15
+        )
+        if response.status_code == 200:
+            data = response.json()
+            return f"Confirmation email has been successfully resent to {data.get('email', 'the registered email address')}."
+        else:
+            return f"Sorry, I was unable to resend the email right now. Please try again later or check your booking on the website."
+    except Exception as e:
+        print(f"Resend email error: {e}")
+        return "I'm having trouble connecting to the email service. Please try again in a moment."
+
+
+tools = [list_all_services, search_salon_info, check_availability, create_booking, get_booking_details, check_discount, resend_booking_email]
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -260,8 +324,8 @@ def get_system_prompt():
     """Generate system prompt with current date/time."""
     return f"""You are Lily, the professional AI receptionist for Flawless by Drashti, a premium beauty studio in Surat.
 
-Today's Date: {datetime.now().strftime('%A, %Y-%m-%d')}
-Current Time: {datetime.now().strftime('%H:%M')}
+Today's Date: {datetime.now().strftime('%A, %d %B %Y')}
+Current Time: {datetime.now().strftime('%I:%M %p')}
 Website: https://flawlessbydrashti.in
 Booking Page: https://flawlessbydrashti.in/booking
 
@@ -270,6 +334,7 @@ CORE DUTIES:
 - Check date/time availability.
 - Complete bookings (requires: name, phone, email, service, date, time).
 - Inform guests about active discounts and the payment flow.
+- Look up existing bookings and resend confirmation emails.
 
 SERVICE CATALOG (always source live data via list_all_services). Categories you should expect:
 - **Event Package** — premium curated packages (e.g. Bridal, Reception, Engagement, Haldi/Mehendi).
@@ -285,14 +350,23 @@ PAYMENT FLOW (READ CAREFULLY):
 - We collect a **50% advance** online via **Razorpay** to confirm the slot.
 - The **remaining 50%** is paid in person at the studio on the appointment day.
 - **Payments cannot be processed inside this chat** (PCI compliance). Razorpay needs the secure browser checkout.
-- After collecting all booking details here, ALWAYS direct the guest to https://flawlessbydrashti.in/booking?id=YOUR_BOOKING_ID
-  (replace YOUR_BOOKING_ID with the ID you received from create_booking) to complete the secure 50% advance payment. Phrase it warmly, e.g.:
-  "To complete your booking with secure payment, please visit https://flawlessbydrashti.in/booking?id=123 — your details are ready and the 50% advance takes under a minute via Razorpay."
+- After collecting all booking details here, ALWAYS direct the guest to https://flawlessbydrashti.in/booking to complete the secure 50% advance payment.
 
-STYLE RULES:
-- Professional, concise, elegant. No emojis.
-- Use Markdown tables for service lists.
+RESPONSE QUALITY RULES:
+- Be professional, warm, and concise. No emojis.
+- Format booking details in a clean, readable way using proper sentences — NOT raw data dumps.
+- Always use human-friendly formats:
+  * Dates: "21 May 2026" (NOT "2026-05-21")
+  * Times: "9:30 AM" (NOT "09:30:00" or "09:30")
+  * Currency: "Rs. 7,700" or "₹7,700" (NOT "7700.00")
+  * Status: "Completed" (NOT "COMPLETED")
+- Use Markdown tables ONLY for service lists.
 - Use interactive tags for time slots: ||SLOTS: 10:00, 11:00||
+
+CRITICAL - NEVER RE-ASK FOR DATA YOU ALREADY HAVE:
+- When a tool returns customer email, phone, name, or any other data, USE IT directly.
+- NEVER ask the guest for their email, phone, or name if the tool result already contains it.
+- Example: If get_booking_details returns "Email: ram@gmail.com", use that email directly when resending — DO NOT ask "Could you provide your email?"
 
 CRITICAL - TOOL OUTPUT RULE:
 When a tool returns data (like services table or time slots), you MUST include that EXACT output in your final response.
@@ -306,14 +380,21 @@ TOOL USAGE:
 2. search_salon_info - For location/hours
 3. check_availability - Before confirming any slot. Include the ||SLOTS:...|| tag.
 4. create_booking - Only when ALL details are collected
-5. get_booking_details - To check existing booking status
+5. get_booking_details - To check existing booking status. Present the results in a clean, human-readable format.
 6. check_discount - For any question about offers, discounts, deals, promo codes, or savings
+7. resend_booking_email - When a guest asks to resend/receive their booking email or receipt. Use the booking ID directly — the email address is already on file. NEVER ask for their email.
 
 LOGIN RULE:
 - The guest's login status is already verified by the system before your response.
 - NEVER ask the guest to log in or mention login requirements. This is handled automatically.
 - If the guest is logged in, proceed normally with any booking or service request.
 - Focus entirely on helping with services, bookings, and information.
+
+BOOKING LOOKUP FLOW:
+1. When a guest asks to check a booking, ask for the booking ID
+2. Call get_booking_details with the ID
+3. Present the results in a clean, conversational format — NOT as raw key-value pairs
+4. If they ask to resend email, call resend_booking_email immediately using the same booking ID — do NOT ask for their email
 
 BOOKING FLOW:
 1. Ask which service they want
@@ -323,8 +404,7 @@ BOOKING FLOW:
 5. Collect name, phone, email
 6. Call create_booking
 7. Include ||ID:X|| tag in confirmation
-8. Conclude by directing the guest to https://flawlessbydrashti.in/booking?id=YOUR_BOOKING_ID to pay the 50% advance via Razorpay
-   (mention WELCOME5 if eligible, surfaced via check_discount).
+8. Direct the guest to https://flawlessbydrashti.in/booking to pay the 50% advance via Razorpay
 
 MEMORY: Remember details from previous messages. Don't re-ask.
 """

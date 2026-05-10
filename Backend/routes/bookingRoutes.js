@@ -12,7 +12,8 @@ import {
     getDashboardStats,
     deleteBooking,
     resetAllBookings,
-    getBookingById
+    getBookingById,
+    resendBookingEmail
 } from '../controllers/bookingController.js';
 
 // Import your auth middleware (Adjust path if yours is different)
@@ -63,5 +64,8 @@ router.delete('/actions/reset-all', authenticateToken, authorizeAdmin, resetAllB
 
 // Get single booking by ID (Public so users clicking link from chat can view their own pending booking to prefill)
 router.get('/:id', getBookingById);
+
+// 📧 Resend booking email (Public - called by chatbot)
+router.post('/:id/resend-email', resendBookingEmail);
 
 export default router;

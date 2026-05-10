@@ -407,17 +407,23 @@ def chat_endpoint():
         return jsonify({"reply": "Conversation reset."})
 
     # ── Deterministic login gate (handled in code, NOT by the LLM) ──
+    # Only block if user is NOT logged in AND clearly wants to CREATE a new booking
     booking_keywords = ["book", "appointment", "schedule", "reserve", "slot", "booking"]
+    check_keywords = ["check", "status", "already", "my booking", "my appointment", "existing", "cancel", "reschedule", "view", "see my", "show my"]
+    
     wants_to_book = any(kw in user_message.lower() for kw in booking_keywords)
+    is_checking_existing = any(kw in user_message.lower() for kw in check_keywords)
 
-    if not is_logged_in and wants_to_book:
+    # Only gate if NOT logged in, wants to book, and is NOT just checking existing bookings
+    if not is_logged_in and wants_to_book and not is_checking_existing:
         return jsonify({"reply": "To proceed with booking, please login first. ||LOGIN_REQUIRED||"})
 
     try:
         # Give the LLM clear context about the guest's login status
-        login_context = "[SYSTEM NOTE: The guest is logged in and verified. Do NOT ask them to login. Proceed with their request normally.]"
-        if not is_logged_in:
-            login_context = "[SYSTEM NOTE: The guest is browsing without an account. They can ask about services and pricing, but booking requires login — this is handled automatically, do NOT mention login yourself.]"
+        if is_logged_in:
+            login_context = "[SYSTEM NOTE: The guest is LOGGED IN and verified. Do NOT ask them to login under any circumstances. They are authenticated. Proceed with their request normally. Help them with whatever they need — booking, checking appointments, services, pricing, etc.]"
+        else:
+            login_context = "[SYSTEM NOTE: The guest is browsing without an account. They can ask about services and pricing, but booking requires login — this is handled automatically by the system, do NOT mention login yourself.]"
 
         contextual_message = f"{login_context}\n{user_message}"
         response = agent_executor.invoke({"input": contextual_message})

@@ -282,6 +282,26 @@ const BookingPage = () => {
     setCouponLoading(false);
   };
 
+  // Auto-apply coupon from banner tap (passes code directly, doesn't rely on state)
+  const autoApplyCoupon = async (code) => {
+    if (!code) return;
+    setCouponCode(code);
+    setShowCoupon(true);
+    setCouponLoading(true); setCouponError('');
+    try {
+      const res = await validateCoupon(code);
+      if (res.data.valid) {
+        setCouponApplied({ code: res.data.code, discount_percent: res.data.discount_percent });
+        setCouponError('');
+        toast.success(`${res.data.discount_percent}% discount applied successfully!`, { icon: '🎉', duration: 3000 });
+      } else {
+        setCouponError(res.data.message); setCouponApplied(null);
+        toast.error(res.data.message || 'Invalid coupon code');
+      }
+    } catch (e) { setCouponError('Failed to validate coupon.'); setCouponApplied(null); toast.error('Failed to validate coupon'); }
+    setCouponLoading(false);
+  };
+
   const removeCoupon = () => { setCouponApplied(null); setCouponCode(''); setCouponError(''); toast('Coupon removed', { icon: '🗑️' }); };
 
   const handleSubmit = async (e) => {
@@ -747,7 +767,7 @@ const BookingPage = () => {
               {selectedMainService && (
                 <div className="mt-6 animate-fadeIn">
                   {couponEligible && !couponApplied && (
-                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3 sm:p-4 mb-4 flex items-start sm:items-center gap-3 cursor-pointer" onClick={() => { setShowCoupon(true); setCouponCode(couponEligible.code); }}>
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3 sm:p-4 mb-4 flex items-start sm:items-center gap-3 cursor-pointer" onClick={() => autoApplyCoupon(couponEligible.code)}>
                       <Gift className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5 sm:mt-0" />
                       <div className="min-w-0">
                         <p className="text-xs sm:text-sm font-semibold text-amber-800 break-words"><Gift className="w-4 h-4 inline mr-1" /> New here? Use code <span className="font-mono bg-amber-100 px-1.5 sm:px-2 py-0.5 rounded text-amber-900 text-[11px] sm:text-sm">{couponEligible.code}</span> for {couponEligible.discount_percent}% off!</p>

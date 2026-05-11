@@ -512,7 +512,7 @@ agent_executor = AgentExecutor(
 def chat_endpoint():
     data = request.json
     user_message = data.get("message", "")
-    is_logged_in = data.get("isLoggedIn", False)
+    is_logged_in = data.get("isLoggedIn", data.get("is_logged_in", False))
     
     if not user_message:
         return jsonify({"reply": "I didn't catch that. How can I help you?"}), 400

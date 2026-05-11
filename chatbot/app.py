@@ -500,7 +500,7 @@ agent_executor = AgentExecutor(
     verbose=True,
     handle_parsing_errors=_handle_parsing_error,
     max_iterations=3,  # Reduced to prevent long loops
-    early_stopping_method="generate"  # Stop gracefully
+    early_stopping_method="force"  # Stop gracefully
 )
 
 

@@ -7,15 +7,16 @@ import whatsappService from '../utils/whatsappService.js';
 const router = express.Router();
 
 router.post('/chat', async (req, res) => {
-    const { message, isLoggedIn } = req.body;
+    const { message, isLoggedIn, sessionId } = req.body;
 
     try {
         // 1. 📞 Call the Python AI Server
         const pythonUrl = process.env.PYTHON_API_URL || 'http://127.0.0.1:8000';
         const response = await axios.post(`${pythonUrl}/chat`, {
             message: message,
-            is_logged_in: isLoggedIn
-        });
+            is_logged_in: isLoggedIn,
+            sessionId: sessionId || req.ip || 'default'
+        }, { timeout: 40000 });
 
         let botReply = response.data.reply;
         console.log("🤖 RAW BOT REPLY:", JSON.stringify(botReply)); // DEBUG LOG

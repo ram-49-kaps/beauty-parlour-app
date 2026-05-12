@@ -257,7 +257,7 @@ def check_availability(booking_date: str) -> str:
 
 @tool
 def create_booking(name: str, email: str, phone: str, service_name: str, booking_date: str, booking_time: str) -> str:
-    """Creates a booking record once ALL details are provided. Details needed: name, email, phone, service, date, time."""
+    """Creates a booking. IMPORTANT: action_input MUST be a JSON object with keys: name, email, phone, service_name, booking_date, booking_time. Example: {"name": "Ram", "email": "ram@gmail.com", "phone": "9409699664", "service_name": "Haldi Ceremony Package", "booking_date": "2026-05-13", "booking_time": "19:00"}"""
     placeholders = ["awaiting", "unknown", "placeholder", "n/a", "not provided", "tbd"]
     if any(p in name.lower() or p in email.lower() or p in phone.lower() for p in placeholders):
         return "I need your actual name, email, and phone number to finalize the booking. Please provide them."
@@ -514,15 +514,24 @@ RULES:
 1. ALWAYS wrap your JSON in ```json code blocks
 2. Use "Final Answer" as action when responding to user
 3. Put your ENTIRE response text inside "action_input" as a single string
-4. For Markdown tables, include them INSIDE the action_input string
-5. NEVER output raw text outside the JSON structure
-6. Valid actions: {tool_names}, "Final Answer"
+4. For tools with MULTIPLE parameters (like create_booking), action_input MUST be a JSON OBJECT with named keys, NOT a comma-separated string
+5. For tools with a SINGLE parameter (like check_availability), action_input can be a plain string
+6. NEVER output raw text outside the JSON structure
+7. Valid actions: {tool_names}, "Final Answer"
 
-EXAMPLE - Using a tool:
+EXAMPLE - Using a single-input tool:
 ```json
 {{
   "action": "check_availability",
   "action_input": "2026-05-13"
+}}
+```
+
+EXAMPLE - Using a multi-input tool (CRITICAL - use a JSON object, NOT a string):
+```json
+{{
+  "action": "create_booking",
+  "action_input": {{"name": "Ram Kapadia", "email": "ram@gmail.com", "phone": "9409699664", "service_name": "Haldi Ceremony Package", "booking_date": "2026-05-13", "booking_time": "19:00"}}
 }}
 ```
 

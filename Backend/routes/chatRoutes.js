@@ -21,18 +21,16 @@ router.post('/chat', async (req, res) => {
         let botReply = response.data.reply;
         console.log("🤖 RAW BOT REPLY:", JSON.stringify(botReply)); // DEBUG LOG
 
-        // 2. 🕵️ Check for Hidden Signal ||ID:123||
+        // 2. 🕵️ Check for Hidden Signal ||ID:123|| — trigger notifications but keep tags for frontend rendering
         const idMatch = botReply.match(/\|\|ID:\s*(\d+)\|\|/);
 
         if (idMatch) {
             const bookingId = idMatch[1];
             console.log(`🎉 AI Created Booking #${bookingId}. Triggering Email...`);
 
-            // ✅ FIX 1: Show the Reference Number instead of hiding it
-            // Replace the hidden tag with a nice user-friendly message
-            botReply = botReply.replace(idMatch[0], `\n\nBooking Reference: #FBD-${String(bookingId).padStart(4, '0')}**`);
+            // Keep ||ID:...|| and ||PAY:...|| tags intact for frontend to render as UI components
 
-            // ✅ FIX 2: Use Async/Await with Promise-based DB
+            // Send notifications in background
             const sql = `
                 SELECT b.*, s.name as service_name, s.price 
                 FROM bookings b 

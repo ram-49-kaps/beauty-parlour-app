@@ -307,7 +307,15 @@ def create_booking(name: str, email: str, phone: str, service_name: str, booking
         h12 = hour - 12 if hour > 12 else (12 if hour == 0 else hour)
         friendly_time = f"{h12}:{m} {ampm}"
 
-        return f"Your appointment for {service_name} has been scheduled for {friendly_date} at {friendly_time}.\n\n||ID:{booking_id}||\n\nTo confirm your slot, please pay the 50% advance (Rs. {int(service['price']) // 2:,}) via Razorpay:\n\n||PAY:{booking_id}:{int(service['price'])}||"
+        advance = int(service['price']) // 2
+
+        return (
+            f"Your appointment for {service_name} has been scheduled for {friendly_date} at {friendly_time}.\n\n"
+            f"||ID:{booking_id}||\n\n"
+            f"To confirm your slot, please pay the 50% advance of Rs. {advance:,} using the payment button below.\n\n"
+            f"||PAY:{booking_id}:{int(service['price'])}||\n\n"
+            f"The remaining Rs. {advance:,} will be paid in person at the studio on the day of your appointment."
+        )
     except Exception as e:
         return f"Technical error while creating booking: {str(e)}"
     finally:
@@ -486,8 +494,7 @@ BOOKING FLOW:
 4. Present available slots (include the ||SLOTS:...|| tag)
 5. After they pick a time, collect name, phone, email
 6. Call create_booking with ALL details
-7. Show confirmation with ||ID:X|| tag
-8. Direct to payment page
+7. Return the tool output EXACTLY as-is — do NOT add extra links, text, or instructions after it. The payment button is already included in the tool response.
 
 MEMORY: Remember details from previous messages in this conversation. Do not re-ask."""
 

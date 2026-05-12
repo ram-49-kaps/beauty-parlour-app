@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { API_BASE_URL } from '../config';
-import { MessageCircle, X, Send, Loader2, LogIn, RotateCcw, Volume2, Square, Calendar, Sparkles, Clock } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, LogIn, RotateCcw, Volume2, Square, Calendar, Sparkles, Clock, IndianRupee } from 'lucide-react';
 
 // Generate a unique session ID per browser tab
 const generateSessionId = () => {
@@ -252,17 +252,20 @@ const ChatWidget = () => {
       );
     }
 
-    // Booking ID tag (show as success card)
+    // Booking ID tag with payment button
     if (text.includes("||ID:")) {
-      const cleanText = text.replace(/\|\|ID:\d+\|\|/g, '').trim();
+      const cleanText = text.replace(/\|\|ID:\d+\|\|/g, '').replace(/\|\|PAY:\d+:\d+\|\|/g, '').trim();
       const idMatch = text.match(/\|\|ID:(\d+)\|\|/);
+      const payMatch = text.match(/\|\|PAY:(\d+):(\d+)\|\|/);
       const bookingId = idMatch ? idMatch[1] : null;
+      const payAmount = payMatch ? parseInt(payMatch[2]) : null;
+      const advanceAmount = payAmount ? Math.ceil(payAmount / 2) : null;
 
       return (
         <div className="space-y-3">
           <div className={`p-3 rounded-lg border ${isDark ? 'bg-green-900/20 border-green-500/30' : 'bg-green-50 border-green-200'}`}>
             <p className={`text-xs font-bold uppercase tracking-wide mb-1 ${isDark ? 'text-green-400' : 'text-green-700'}`}>
-              Booking Confirmed
+              Booking Created
             </p>
             {bookingId && (
               <p className={`text-sm font-mono ${isDark ? 'text-green-300' : 'text-green-800'}`}>
@@ -273,6 +276,23 @@ const ChatWidget = () => {
           {cleanText.split('\n').filter(l => l.trim()).map((line, i) => (
             <p key={i}>{renderInlineFormatting(line)}</p>
           ))}
+          {bookingId && (
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                navigate(`/booking?id=${bookingId}`);
+              }}
+              className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold uppercase tracking-wide transition-all duration-200 ${isDark
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              }`}
+            >
+              <IndianRupee size={16} />
+              {advanceAmount
+                ? `Pay Rs. ${advanceAmount.toLocaleString('en-IN')} Advance Now`
+                : 'Complete Payment'}
+            </button>
+          )}
         </div>
       );
     }
